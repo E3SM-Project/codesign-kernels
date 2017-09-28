@@ -1,3 +1,5 @@
+## Results
+
 Platform: Titan
 Date: 09/28/2017.
 
@@ -17,3 +19,4 @@ pgiacc.17.7
  GPU1 time:    1.5874099999999999E-002
  GPU2 time:    3.0742000000000000E-003 <- GPU2 seems better
 
+ A detailed nvprof report is present in the directory.
