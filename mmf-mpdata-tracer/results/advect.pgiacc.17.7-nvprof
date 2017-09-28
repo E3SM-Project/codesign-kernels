@@ -1,0 +1,72 @@
+==18195== NVPROF is profiling process 18195, command: ./advect.pgiacc.17.7
+ CPU Timing:    7.2268999999999996E-003
+ OpenACC-1 Timing:    1.0011000000000000E-003
+ Relative L1 Error - f    :    2.2036265020918366E-016
+ Relative L1 Error - flux :    8.2139263308099903E-017
+ OpenACC-2 Timing:    5.4000000000000001E-004
+ Relative L1 Error - f    :    2.2036265020918366E-016
+ Relative L1 Error - flux :    8.2139263308099903E-017
+ OpenACC-1 Timing:    5.5409999999999997E-004
+ Relative L1 Error - f    :    2.2036265020918366E-016
+ Relative L1 Error - flux :    8.2139263308099903E-017
+ OpenACC-2 Timing:    3.6699999999999998E-004
+ Relative L1 Error - f    :    2.2036265020918366E-016
+ Relative L1 Error - flux :    8.2139263308099903E-017
+==18195== Profiling application: ./advect.pgiacc.17.7
+==18195== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 72.05%  3.9562ms        59  67.054us  6.5280us  142.53us  [CUDA memcpy HtoD]
+  9.65%  529.98us         8  66.247us  6.0480us  126.50us  [CUDA memcpy DtoH]
+  2.42%  132.80us         2  66.399us  66.335us  66.463us  advect_scalar2d_openacc_2_159_gpu
+  1.54%  84.767us         2  42.383us  42.079us  42.688us  advect_scalar2d_openacc_2_190_gpu
+  1.54%  84.511us         2  42.255us  42.240us  42.271us  advect_scalar2d_openacc_1_413_gpu
+  1.29%  70.943us         2  35.471us  35.359us  35.584us  advect_scalar2d_openacc_1_362_gpu
+  1.22%  66.815us         2  33.407us  33.312us  33.503us  advect_scalar2d_openacc_2_112_gpu
+  1.08%  59.070us         2  29.535us  29.503us  29.567us  advect_scalar2d_openacc_2_204_gpu
+  1.00%  54.784us         2  27.392us  27.296us  27.488us  advect_scalar2d_openacc_1_377_gpu
+  0.92%  50.399us         2  25.199us  24.991us  25.408us  advect_scalar2d_openacc_1_400_gpu
+  0.72%  39.360us         2  19.680us  19.648us  19.712us  advect_scalar2d_openacc_1_346_gpu
+  0.72%  39.359us         2  19.679us  19.583us  19.776us  advect_scalar2d_openacc_2_150_gpu
+  0.71%  39.199us         2  19.599us  19.551us  19.648us  advect_scalar2d_openacc_1_427_gpu
+  0.68%  37.568us         2  18.784us  18.784us  18.784us  advect_scalar2d_openacc_1_437_gpu
+  0.66%  36.192us         2  18.096us  18.080us  18.112us  advect_scalar2d_openacc_2_227_gpu
+  0.65%  35.520us         2  17.760us  17.472us  18.048us  advect_scalar2d_openacc_1_457_gpu
+  0.62%  33.856us         2  16.928us  16.896us  16.960us  advect_scalar2d_openacc_1_310_gpu
+  0.60%  32.831us         2  16.415us  16.383us  16.448us  advect_scalar2d_openacc_1_319_gpu
+  0.53%  29.248us         2  14.624us  14.400us  14.848us  advect_scalar2d_openacc_1_295_gpu
+  0.30%  16.352us         2  8.1760us  8.1280us  8.2240us  advect_scalar2d_openacc_2_137_gpu
+  0.22%  12.192us         2  6.0960us  6.0160us  6.1760us  advect_scalar2d_openacc_2_217_gpu
+  0.22%  12.096us         2  6.0480us  5.9840us  6.1120us  advect_scalar2d_openacc_1_328_gpu
+  0.21%  11.744us         2  5.8720us  5.8560us  5.8880us  advect_scalar2d_openacc_1_447_gpu
+  0.15%  8.0320us         2  4.0160us  4.0000us  4.0320us  advect_scalar2d_openacc_1_338_gpu
+  0.12%  6.7200us         2  3.3600us  3.3280us  3.3920us  advect_scalar2d_openacc_1_355_gpu
+  0.10%  5.3440us         2  2.6720us  2.6240us  2.7200us  advect_scalar2d_openacc_1_392_gpu
+  0.09%  5.0880us         2  2.5440us  2.4960us  2.5920us  advect_scalar2d_openacc_1_287_gpu
+
+==18195== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 48.15%  775.03ms         3  258.34ms  45.391ms  683.99ms  cuMemHostAlloc
+ 30.73%  494.65ms         1  494.65ms  494.65ms  494.65ms  cuDevicePrimaryCtxRelease
+ 17.68%  284.52ms         1  284.52ms  284.52ms  284.52ms  cuDevicePrimaryCtxRetain
+  2.76%  44.368ms         2  22.184ms  22.134ms  22.235ms  cuMemFreeHost
+  0.17%  2.8099ms        23  122.17us  7.5220us  316.44us  cuMemAlloc
+  0.17%  2.6593ms         1  2.6593ms  2.6593ms  2.6593ms  cuModuleLoadData
+  0.11%  1.7493ms         2  874.62us  847.91us  901.34us  cuMemAllocHost
+  0.09%  1.4775ms        21  70.359us  3.8400us  132.68us  cuStreamSynchronize
+  0.05%  775.70us        50  15.514us  12.414us  48.352us  cuLaunchKernel
+  0.04%  644.01us       661     974ns     785ns  5.1510us  cuPointerGetAttributes
+  0.04%  642.12us        59  10.883us  8.2560us  39.367us  cuMemcpyHtoDAsync
+  0.01%  93.920us         2  46.960us  43.113us  50.807us  cuDeviceTotalMem
+  0.01%  93.892us         8  11.736us  8.8140us  15.878us  cuMemcpyDtoHAsync
+  0.00%  61.524us         2  30.762us  27.424us  34.100us  cuStreamCreate
+  0.00%  31.600us         8  3.9500us  3.8400us  4.1550us  cuEventSynchronize
+  0.00%  29.434us         8  3.6790us  3.1120us  4.2520us  cuEventRecord
+  0.00%  26.887us        25  1.0750us     559ns  4.6080us  cuModuleGetFunction
+  0.00%  6.5860us         3  2.1950us  1.2300us  3.7590us  cuEventCreate
+  0.00%  4.1940us         1  4.1940us  4.1940us  4.1940us  cuMemFree
+  0.00%  3.0440us         2  1.5220us     424ns  2.6200us  cuDeviceGetCount
+  0.00%  2.9270us         3     975ns     380ns  1.9530us  cuCtxSetCurrent
+  0.00%     941ns         2     470ns     429ns     512ns  cuDeviceGet
+  0.00%     577ns         1     577ns     577ns     577ns  cuCtxGetCurrent
+  0.00%     482ns         1     482ns     482ns     482ns  cuDeviceComputeCapability
+Application 15970090 resources: utime ~0s, stime ~2s, Rss ~1250908, inblocks ~7986, outblocks ~17349

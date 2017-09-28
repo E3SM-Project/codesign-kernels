@@ -1,0 +1,14 @@
+ CPU Timing:    2.2919999999999999E-002
+ OpenACC-1 Timing:    2.3036999999999998E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+ OpenACC-2 Timing:    2.4419000000000000E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+ OpenACC-1 Timing:    2.0830000000000001E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+ OpenACC-2 Timing:    2.2183000000000001E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+Application 15970081 resources: utime ~0s, stime ~0s, Rss ~14672, inblocks ~45, outblocks ~68
