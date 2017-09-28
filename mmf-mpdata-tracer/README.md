@@ -17,3 +17,8 @@ make pgiacc=1
 ## Run
 ./advect
 
+## Compilers known to work
+gnu.4.9.3 
+gnu.7.1.0  
+intel.17.0.0.098  
+pgi.17.7 
