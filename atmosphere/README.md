@@ -1,15 +1,13 @@
+# Atmospheric kernel 
+
 ## Build
 
-Serial:
-gfortran -ffree-line-length-none biharmonic_wk_kernel.F90
+Simple:
+make gnu=1 
 
-GPU: 
-pgf90 -O3 -Minfo=acc -ta=tesla,cuda7.5,pinned -acc biharmonic_wk_kernel.F90 
+PGI OpenACC on GPU: 
+make pgiacc=1
 
 ## Run
-Serial:
-./a.out
+./atm
 
-Titan:
-export OMP_NUM_THREADS=16 
-aprun -d 16 ./a.out
