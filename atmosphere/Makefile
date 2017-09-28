@@ -4,6 +4,16 @@ ifdef gnu
 	FFLAGS = -O3 -ffree-line-length-none
 endif
 
+ifdef intel
+	FC = ifort
+	FFLAGS += -O3 
+endif	
+
+ifdef pgi
+	FC = pgf90
+	FFLAGS += -fast 
+endif	
+
 ifdef pgiacc
 	FC = pgf90
 	FFLAGS += -fast -Minfo=acc -ta=tesla,cuda7.5,pinned -acc
