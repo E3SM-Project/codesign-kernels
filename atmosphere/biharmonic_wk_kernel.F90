@@ -557,19 +557,25 @@ program biharmonic_wk_scalar_kernel
   call bws_cpu(elem,qtens,deriv,nets,nete)
   call system_clock(t2,rt)
   call save_qtens()
-  write(*,*) 'CPU time: ', dble(t2-t1)/dble(rt)
+  write(*,*) 'CPU  time: ', dble(t2-t1)/dble(rt)
 
   call initialize_data()
+  call system_clock(t1)
   !$acc update device(qtens,elem,deriv)
   call bws_gpu1(elem,qtens,deriv,nets,nete)
   !$acc update host(qtens)
-  write(*,*) compute_l2norm()
+  call system_clock(t2,rt)
+  write(*,*) 'GPU1 time: ', dble(t2-t1)/dble(rt)
+  write(*,*) 'GPU1 L2 norm: ', compute_l2norm()
 
   call initialize_data()
+  call system_clock(t1)
   !$acc update device(qtens,elem,deriv)
   call bws_gpu2(elem,qtens,grads,deriv,nets,nete)
   !$acc update host(qtens)
-  write(*,*) compute_l2norm()
+  call system_clock(t2,rt)
+  write(*,*) 'GPU2 time: ', dble(t2-t1)/dble(rt)
+  write(*,*) 'GPU2 L2 norm: ', compute_l2norm()
 
 end program biharmonic_wk_scalar_kernel
 
