@@ -1,0 +1,40 @@
+==17448== NVPROF is profiling process 17448, command: ../atm.pgiacc.17.7
+ CPU  time:    1.6969900000000000E-002
+ GPU1 time:    1.5899000000000000E-002
+ GPU1 L2 norm:    1.4718904861260191E-016
+ GPU2 time:    3.2599000000000000E-003
+ GPU2 L2 norm:    1.4285968430210161E-016
+==17448== Profiling application: ../atm.pgiacc.17.7
+==17448== Profiling result:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 73.69%  13.460ms         1  13.460ms  13.460ms  13.460ms  biharmonic_wk_scalar_326_gpu
+ 10.96%  2.0025ms         9  222.50us  2.9440us  986.90us  [CUDA memcpy HtoD]
+  9.69%  1.7691ms         2  884.57us  881.65us  887.48us  [CUDA memcpy DtoH]
+  3.98%  726.87us         1  726.87us  726.87us  726.87us  gradient_sphere_openacc_452_gpu
+  0.97%  177.44us         1  177.44us  177.44us  177.44us  divergence_sphere_wk_openacc_400_gpu
+  0.71%  128.83us         1  128.83us  128.83us  128.83us  laplace_sphere_wk_openacc_506_gpu
+
+==17448== API calls:
+Time(%)      Time     Calls       Avg       Min       Max  Name
+ 47.17%  727.56ms         2  363.78ms  44.986ms  682.57ms  cuMemHostAlloc
+ 31.89%  491.85ms         1  491.85ms  491.85ms  491.85ms  cuDevicePrimaryCtxRelease
+ 18.08%  278.90ms         1  278.90ms  278.90ms  278.90ms  cuDevicePrimaryCtxRetain
+  1.45%  22.400ms         1  22.400ms  22.400ms  22.400ms  cuMemFreeHost
+  1.18%  18.235ms         8  2.2793ms  133.07us  13.465ms  cuStreamSynchronize
+  0.07%  1.0470ms         8  130.87us  8.2760us  250.71us  cuMemAlloc
+  0.06%  856.77us         1  856.77us  856.77us  856.77us  cuMemAllocHost
+  0.05%  803.85us         1  803.85us  803.85us  803.85us  cuModuleLoadData
+  0.03%  419.44us         4  104.86us  14.505us  350.78us  cuLaunchKernel
+  0.01%  150.22us         9  16.690us  9.0180us  39.104us  cuMemcpyHtoDAsync
+  0.01%  82.636us         2  41.318us  38.966us  43.670us  cuDeviceTotalMem
+  0.00%  58.161us        49  1.1860us     601ns  5.0030us  cuPointerGetAttributes
+  0.00%  33.992us         1  33.992us  33.992us  33.992us  cuStreamCreate
+  0.00%  26.631us         2  13.315us  11.769us  14.862us  cuMemcpyDtoHAsync
+  0.00%  4.0470us         1  4.0470us  4.0470us  4.0470us  cuMemFree
+  0.00%  3.9150us         4     978ns     510ns  2.1630us  cuModuleGetFunction
+  0.00%  3.3460us         3  1.1150us     361ns  2.2690us  cuCtxSetCurrent
+  0.00%  3.1130us         2  1.5560us     459ns  2.6540us  cuDeviceGetCount
+  0.00%     997ns         2     498ns     491ns     506ns  cuDeviceGet
+  0.00%     509ns         1     509ns     509ns     509ns  cuCtxGetCurrent
+  0.00%     492ns         1     492ns     492ns     492ns  cuDeviceComputeCapability
+Application 15969958 resources: utime ~0s, stime ~2s, Rss ~1176348, inblocks ~7396, outblocks ~17205

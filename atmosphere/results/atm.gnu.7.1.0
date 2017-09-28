@@ -1,0 +1,6 @@
+ CPU  time:    8.5059999999999997E-003
+ GPU1 time:    1.0623000000000000E-002
+ GPU1 L2 norm:    1.4477731365593603E-016
+ GPU2 time:    3.0721999999999999E-002
+ GPU2 L2 norm:    1.3341964743086566E-016
+Application 15969929 resources: utime ~0s, stime ~0s, Rss ~24008, inblocks ~52, outblocks ~83
