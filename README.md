@@ -5,8 +5,11 @@ These kernels are intended for sharing with interested parties for co-design pur
 # Contributions
 We welcome your contributions in the form of well-articulated pull requests. Please contact us with any alternative suggestions. 
 
+# Authors
+Matt Norman
+
 # Point of Contact
-Please send any questions or comments to sarat-at-ornl.gov.
+Please send any questions or comments to Sarat Sreepathi (sarat-at-ornl.gov).
 
 # Acknowledgments
 This research was supported by the Exascale Computing Project (17-SC-20-SC), a collaborative effort of the U.S. Department of Energy Office of Science and the National Nuclear Security Administration.   
