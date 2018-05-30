@@ -2,27 +2,27 @@
 
 ## Build
 
-GNU:
+GNU:  
 make gnu=1 
 
-Intel:
+Intel:  
 make intel=1
 
-PGI:
+PGI:  
 make pgi=1
 
-PGI OpenACC on GPU: 
+PGI OpenACC on GPU:  
 make pgiacc=1
 
-ARM:
+ARM:  
 make arm=1
 
-## Run
-./advect
+## Run  
+./advect  
 
 ## Compilers known to work
-gnu.4.9.3 
-gnu.7.1.0  
-intel.17.0.0.098  
-pgi.17.7 
-Arm.18.2
+gnu.4.9.3  
+gnu.7.1.0   
+intel.17.0.0.098   
+pgi.17.7  
+Arm.18.2  
