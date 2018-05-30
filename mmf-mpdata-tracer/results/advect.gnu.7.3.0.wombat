@@ -1,0 +1,13 @@
+ CPU Timing:    1.7272532000000000E-002
+ OpenACC-1 Timing:    1.7255651000000000E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+ OpenACC-2 Timing:    1.6826272000000000E-002
+ Relative L1 Error - f    :    5.5325293136663328E-017
+ Relative L1 Error - flux :    2.9113832248012017E-017
+ OpenACC-1 Timing:    1.6933321000000001E-002
+ Relative L1 Error - f    :    0.0000000000000000     
+ Relative L1 Error - flux :    0.0000000000000000     
+ OpenACC-2 Timing:    1.6488197000000000E-002
+ Relative L1 Error - f    :    5.5325293136663328E-017
+ Relative L1 Error - flux :    2.9113832248012017E-017
