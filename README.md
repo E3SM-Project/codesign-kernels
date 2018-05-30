@@ -1,12 +1,13 @@
 # Climate kernels for Co-design
 
-These kernels are intended for sharing with interested parties for co-design purposes. They originate from the Energy Exascale Earth System Model (E3SM), formerly known as Accelerated Climate Modeling for Energy (ACME).
+These kernels are intended for sharing with interested parties for co-design purposes. They originate from the [Energy Exascale Earth System Model (E3SM)](https://e3sm.org), formerly known as Accelerated Climate Modeling for Energy (ACME).
 
 # Contributions
 We welcome your contributions in the form of well-articulated pull requests. Please contact us with any alternative suggestions. 
 
 # Authors
 Matt Norman
+Sarat Sreepathi
 
 # Point of Contact
 Please send any questions or comments to Sarat Sreepathi (sarat-at-ornl.gov).
