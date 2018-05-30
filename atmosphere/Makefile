@@ -19,6 +19,16 @@ ifdef pgiacc
 	FFLAGS += -fast -Minfo=acc -ta=tesla,cuda7.5,pinned -acc
 endif	
 
+ifdef cray
+	FC = ftn
+	FFLAGS += -O3
+endif	
+
+ifdef arm
+	FC = armflang
+	FFLAGS += -O3
+endif	
+
 LDFLAGS = 
 # Name of executable
 EXE = atm
