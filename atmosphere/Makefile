@@ -1,7 +1,7 @@
 # Choose compiler when invoking make : make gnu=1 or pgiacc=1
 ifdef gnu
 	FC = gfortran
-	FFLAGS = -O3 -ffree-line-length-none
+	FFLAGS = -O3 -ffree-line-length-none 
 endif
 
 ifdef intel
@@ -26,7 +26,12 @@ endif
 
 ifdef arm
 	FC = armflang
-	FFLAGS += -O3
+	FFLAGS += -O3 -mcpu=thunderx2t99
+endif	
+
+ifdef armsve
+	FC = armflang
+	FFLAGS += -O3 -march=armv8-a+sve
 endif	
 
 LDFLAGS = 
