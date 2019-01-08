@@ -34,6 +34,17 @@ ifdef armsve
 	FFLAGS += -O3 -march=armv8-a+sve
 endif	
 
+ifdef amzarm
+	FC = /opt/rh/devtoolset-7/root/usr/bin/gfortran
+	FFLAGS = -O3 -ffree-line-length-none
+endif	
+
+
+ifdef armsve
+	FC = armflang
+	FFLAGS += -O3 -march=armv8-a+sve
+endif	
+
 LDFLAGS = 
 # Name of executable
 EXE = atm

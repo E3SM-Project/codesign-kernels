@@ -48,22 +48,22 @@ program test_advect
   call init()
   call advect_scalar2D_cpu(f,u,w,rho,rhow,flux)
   call save()
-
-  call init()
-  call advect_scalar2D_openacc_1(f,u,w,rho,rhow,flux)
-  call compare()
-
-  call init()
-  call advect_scalar2D_openacc_2(f,u,w,rho,rhow,flux)
-  call compare()
-
-  call init()
-  call advect_scalar2D_openacc_1(f,u,w,rho,rhow,flux)
-  call compare()
-
-  call init()
-  call advect_scalar2D_openacc_2(f,u,w,rho,rhow,flux)
-  call compare()
+!
+!  call init()
+!  call advect_scalar2D_openacc_1(f,u,w,rho,rhow,flux)
+!  call compare()
+!
+!  call init()
+!  call advect_scalar2D_openacc_2(f,u,w,rho,rhow,flux)
+!  call compare()
+!
+!  call init()
+!  call advect_scalar2D_openacc_1(f,u,w,rho,rhow,flux)
+!  call compare()
+!
+!  call init()
+!  call advect_scalar2D_openacc_2(f,u,w,rho,rhow,flux)
+!  call compare()
 
 
 contains
