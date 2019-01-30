@@ -1,0 +1,5 @@
+Client inscount is running
+ GPU1 time:    0.1650879000000000     
+ GPU1 L2 norm:                        Inf
+82314350 instructions executed of which 0 were emulated instructions
+
