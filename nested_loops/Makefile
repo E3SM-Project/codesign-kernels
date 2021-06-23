@@ -1,22 +1,58 @@
-F90 := ifort
-F90ACC := pgf90
+FC = 
+FFLAGS =
+LDFLAGS =
 
-nested: nested.f90
-	cpp -P -traditional nested.f90 > nested-ref.f90
-	cpp -P -traditional -DORIG nested.f90 > nested-orig.f90
-	$(F90) -o nested-ref.x nested-ref.f90  -O3 -g -convert big_endian \
-			-cpp -free -align array64byte -qopt-report=5 -xHost
-	$(F90) -o nested-orig.x nested-orig.f90  -O3 -g -convert big_endian \
-			-cpp -free -align array64byte -qopt-report=5 -xHost
-	
-nested-acc: nested.f90
-	cpp -P -traditional -Uvector nested.f90 > nested-accref.f90
-	cpp -P -traditional -Uvector -DORIG nested.f90 > nested-accorig.f90
-	$(F90ACC) -o nested-accref.x nested-accref.f90  -O3 -g -acc -Minfo=accel \
-		-ta=tesla:cc70,cc60,deepcopy,nollvm -byteswapio -Mfree
-	$(F90ACC) -o nested-accorig.x nested-accorig.f90  -O3 -g -acc -Minfo=accel \
-		-ta=tesla:cc70,cc60,deepcopy,nollvm -byteswapio -Mfree
+dummy:
+	@echo "ERROR: Unknown target"
+
+xlf-summit-omp-offload:
+	make nested \
+	"FC=xlf90_r" \
+	"FFLAGS=-qsmp -qoffload -O3" \
+	"LDFLAGS=-qsmp -qoffload -lcudart -L$(CUDA_DIR)/lib64"
+
+pgi-cpu:
+	make nested \
+	"FC=pgf90" \
+	"FFLAGS=-g -O3" \
+	"LDFLAGS=-O3"
+
+pgi-acc:
+	make nested \
+	"FC=pgf90" \
+	"FFLAGS=-O3 -acc -Minfo=accel -ta=tesla:cc70,cc60,deepcopy,nollvm" \
+	"LDFLAGS=-O3 -acc"
+
+ifort:
+	make nested \
+	"FC=ifort" \
+	"FFLAGS=-O3 -align array64byte -qopt-report=5" \
+	"LDFLAGS=-O3"
+
+gnu:
+	make nested \
+	"FC=gfortran" \
+	"FFLAGS=-O3 -m64" \
+	"LDFLAGS=-O3 -m64"
+
+llvm:
+	make nested \
+	"FC=flang" \
+	"FFLAGS=-O3" \
+	"LDFLAGS=-O3"
+
+nested: nested.o timerMod.o
+	@echo "Linking"
+	$(FC) $(LDFLAGS) -o nested nested.o timerMod.o
+
+nested.o: nested.f90 timerMod.o
+	@echo "Building nested source"
+	$(FC) -c $(FFLAGS) nested.f90
+
+timerMod.o: timerMod.f90
+	@echo "Building timer module"
+	$(FC) -c $(FFLAGS) timerMod.f90
 
 clean:
-	rm -f nested-ref.f90 nested-orig.f90 \
-		nested-accref.f90 nested-accorig.f90 *.x *optrpt	
+	/bin/rm nested *.o *optrpt
+

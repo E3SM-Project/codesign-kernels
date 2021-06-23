@@ -10,8 +10,8 @@
 
 program nested
 
-   implicit none
    use timerMod
+   implicit none
 
    integer, parameter :: &
       RKIND = selected_real_kind(12) ! default double precision
@@ -22,6 +22,8 @@ program nested
       nCells,       &! number of cells
       nVertLevels,  &! number of vertical levels
       nAdv           ! max num cells contributing to edge for advection
+
+   namelist /nested_nml/ nIters, nEdges, nCells, nVertLevels, nAdv
 
    integer :: &
       i,j,k,n,iEdge,iCell ! various loop iterators
@@ -66,19 +68,24 @@ program nested
    ! Begin code
 
    ! Set model size
-   ! Read this from namelist eventually
+   ! Set defaults for model size variables
    nIters = 100
    nEdges = 16*1600    ! number of edges
    nCells = 4*700      ! number of cells
    nVertLevels = 100   ! number of vertical levels
    nAdv = 10           ! cells contributing to an edge for advection
  
+   ! Read model size info from namelist input, overwriting defaults
+   open (15, file='nested.nml')
+   read (15, nml=nested_nml)
+   close(15)
+
    ! Allocate various arrays
    allocate(nAdvCellsForEdge(nEdges), &
             minLevelCell    (nCells), &
             maxLevelCell    (nCells), &
             advCellsForEdge(nadv, nEdges), &
-            tmpTracer     (nadv,nVertLevels,nEdges), 
+            tmpTracer     (nadv,nVertLevels,nEdges), & 
             tracerCur          (nVertLevels,ncells), &
             normalThicknessFlux(nVertLevels,nEdges), &
             highOrderFlx       (nVertLevels,nEdges), &
@@ -105,18 +112,18 @@ program nested
       ! For bottom level, we want the depth to be somewhere between
       ! 3 and the max nVertLevels with a good fraction (half?) at
       ! the max depth so...
-      call random_number(randNumber)
-      k = nint(randNumber*nVertLevels*2.0)
+      call random_number(randNum)
+      k = nint(randNum*nVertLevels*2.0)
       maxLevelCell(iCell) = min(max(3,k),nVertLevels)
    end do
 
    ! Set tracer values to random number
    do iCell = 1,nCells
    do k = 1,nVertLevels
-      if (k >= minVertLevels(iCell) .and. &
-          k <= maxVertLevels(iCell)) then
-         call random_number(randNumber)
-         tracerCur(i,j) = 15.0_RKIND * randNumber
+      if (k >= minLevelCell(iCell) .and. &
+          k <= maxLevelCell(iCell)) then
+         call random_number(randNum)
+         tracerCur(i,j) = 15.0_RKIND * randNum
       else
          tracerCur(i,j) = 0.0_RKIND
       endif
@@ -128,12 +135,12 @@ program nested
    do iEdge=1,nEdges
       nAdvCellsForEdge(iEdge) = nadv
       do i = 1,nadv
-         call random_number(randNumber)
-         advCellsForEdge(i,iEdge) = int(nCells * randNumber) + 1
-         call random_number(randNumber)
-         advCoefs   (i,iEdge) = 20.0_RKIND * randNumber
-         call random_number(randNumber)
-         advCoefs3rd(i,iEdge) = 21.0_RKIND * randNumber
+         call random_number(randNum)
+         advCellsForEdge(i,iEdge) = int(nCells * randNum) + 1
+         call random_number(randNum)
+         advCoefs   (i,iEdge) = 20.0_RKIND * randNum
+         call random_number(randNum)
+         advCoefs3rd(i,iEdge) = 21.0_RKIND * randNum
       end do
    end do
    
@@ -141,8 +148,8 @@ program nested
    do iEdge = 1,nEdges
    do k = 1,nVertLevels
       highOrderFlx(k,iEdge) = 0.0_RKIND
-      call random_number(randNumber)
-      normalThicknessFlux(k,iEdge) = 15.0_RKIND*(0.5_RKIND - randNumber)
+      call random_number(randNum)
+      normalThicknessFlux(k,iEdge) = 15.0_RKIND*(0.5_RKIND - randNum)
       advMaskHighOrder   (k,iEdge) = 1.0_RKIND
    end do
    end do
@@ -179,9 +186,9 @@ program nested
          do k = 1, nVertLevels
             wgtTmp(k) = normalThicknessFlux   (k,iEdge)* &
                         advMaskHighOrder(k,iEdge)
-            sgnTmp(k) = sign(1.0, &
+            sgnTmp(k) = sign(1.0_RKIND, &
                              normalThicknessFlux(k,iEdge))
-            flxTmp(k) = 0.0
+            flxTmp(k) = 0.0_RKIND
          end do
 
          ! Compute 3rd or 4th fluxes where requested.
@@ -220,7 +227,7 @@ program nested
       do k = 1, nVertLevels
          ! Compute 3rd or 4th fluxes where requested.
          coef2 = normalThicknessFlux(k,iEdge)*advMaskHighOrder(k,iEdge)
-         csgn = sign(1.0,normalThicknessFlux(k,iEdge))
+         csgn = sign(1.0_RKIND,normalThicknessFlux(k,iEdge))
          do i = 1, nAdvCellsForEdge(iEdge)
             coef1 = advCoefs       (i,iEdge)
             coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder

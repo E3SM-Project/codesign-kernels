@@ -15,13 +15,14 @@ module timerMod
    ! basic timer type
    type Timer
       real :: startTime   ! start time of current interval
-      real :: endTime     ! end   time of current interval
+      real :: stopTime     ! end   time of current interval
       real :: elapsedTime ! total elapsed time for this timer
       logical :: running  ! true if timer has been started
       character (len=120) :: name ! name for this timer
    end type Timer
 
    public:: &
+      Timer, &
       timerCreate, &
       timerStart,  &
       timerStop,   &
@@ -41,14 +42,14 @@ contains
 
    function timerCreate(timerName) result(newTimer)
 
-      type(Timer), intent(out) :: newTimer
+      type (Timer) :: newTimer
       character (*), intent(in) :: timerName ! name to assign this timer
 
       newTimer%name = ' '
       newTimer%name = trim(timerName)
 
       newTimer%startTime   = 0.0
-      newTimer%endTime     = 0.0
+      newTimer%stopTime    = 0.0
       newTimer%elapsedTime = 0.0
       newTimer%running  = .false.
 
@@ -113,7 +114,7 @@ contains
       if (inTimer%running) call timerStop(inTimer)
 
       ! Print the elapsed time from this timer
-      print *,'Time in timer: ',trim(timerName),' = ', &
+      print *,'Time in timer: ',trim(inTimer%name),' = ', &
               inTimer%elapsedTime, ' seconds.'
 
    end subroutine timerPrint
