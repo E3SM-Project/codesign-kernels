@@ -5,22 +5,41 @@ LDFLAGS =
 dummy:
 	@echo "ERROR: Unknown target"
 
-xlf-summit-omp-offload:
+# On spock, both gnu and cray compilers use ftn wrapper from Cray PrgEnv
+cray-cpu:
 	make nested \
-	"FC=xlf90_r" \
-	"FFLAGS=-qsmp -qoffload -O3" \
+	"FC=ftn" \
+	"FFLAGS= -O3" \
+	"LDFLAGS= -O3"
+
+cray-omp:
+	make nested \
+	"FC=ftn" \
+	"FFLAGS=-DUSE_OMPOFFLOAD -homp -fopenmp -O3" \
+	"LDFLAGS=-homp -fopenmp"
+
+craygnu-omp:
+	make nested \
+	"FC=ftn" \
+	"FFLAGS= -DUSE_OMPOFFLOAD -fopenmp -O3" \
+	"LDFLAGS= -fopenmp"
+
+xlf-omp:
+	make nested \
+	"FC=mpif90" \
+	"FFLAGS=-DUSE_OMPOFFLOAD -qsmp -qoffload -O3" \
 	"LDFLAGS=-qsmp -qoffload -lcudart -L$(CUDA_DIR)/lib64"
 
-pgi-cpu:
+nvhpc-cpu:
 	make nested \
-	"FC=pgf90" \
+	"FC=mpif90" \
 	"FFLAGS=-g -O3" \
 	"LDFLAGS=-O3"
 
-pgi-acc:
+nvhpc-acc:
 	make nested \
-	"FC=pgf90" \
-	"FFLAGS=-O3 -acc -Minfo=accel -ta=tesla:cc70,cc60,deepcopy,nollvm" \
+	"FC=mpif90" \
+	"FFLAGS=-DUSE_OPENACC -O3 -acc -Minfo=accel -ta=tesla:cc70,cc60,deepcopy,nollvm" \
 	"LDFLAGS=-O3 -acc"
 
 ifort:
@@ -45,14 +64,14 @@ nested: nested.o timerMod.o
 	@echo "Linking"
 	$(FC) $(LDFLAGS) -o nested nested.o timerMod.o
 
-nested.o: nested.f90 timerMod.o
+nested.o: nested.F90 timerMod.o
 	@echo "Building nested source"
-	$(FC) -c $(FFLAGS) nested.f90
+	$(FC) -c $(FFLAGS) nested.F90
 
 timerMod.o: timerMod.f90
 	@echo "Building timer module"
 	$(FC) -c $(FFLAGS) timerMod.f90
 
 clean:
-	/bin/rm nested *.o *optrpt
+	/bin/rm -f nested *.o *optrpt *.s *.mod *.MOD
 
