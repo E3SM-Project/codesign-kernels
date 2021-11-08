@@ -2,6 +2,17 @@ FC =
 FFLAGS =
 LDFLAGS =
 
+# if using C++/Kokkos, set
+# * the EKAT installation root dir
+# * CKE_PACK_SIZE
+EKAT = # no default
+CKE_PACK_SIZE = 4 # CPU default; want 1 on GPU for max performance, but 4 will work
+include make.inc
+CKE_FLAGS = -DUSE_CKE -DCKE_PACK_SIZE=${CKE_PACK_SIZE} \
+	-I${EKAT}/include -I${EKAT}/include/kokkos
+CKE_LIBS = -lstdc++ -L${EKAT}/lib -L${EKAT}/lib64 -lekat -lkokkoscore -ldl
+CKE_OBJECTS = cke_mod.o cke.o cke_impl1.o
+
 dummy:
 	@echo "ERROR: Unknown target"
 
@@ -50,8 +61,8 @@ ifort:
 
 gnu:
 	make nested \
-	"FC=gfortran" \
-	"FFLAGS=-O3 -m64" \
+	"FC=mpif90" \
+	"FFLAGS=-O3 -m64 -Wall -pedantic" \
 	"LDFLAGS=-O3 -m64"
 
 llvm:
@@ -60,11 +71,49 @@ llvm:
 	"FFLAGS=-O3" \
 	"LDFLAGS=-O3"
 
+gnu-cpu-cke:
+	make nestedcke \
+	"FC=mpif90" \
+	"CXX=mpicxx" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic ${CKE_FLAGS}" \
+	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
+
+gnu-weaver-cke:
+	make nestedcke \
+	"FC=mpif90" \
+	"CXX=mpicxx" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
+		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS}" \
+	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -lcudadevrt -lcudart_static -lrt"
+
+gnu-summit-cke:
+	make nestedcke \
+	"FC=mpif90" \
+	"CXX=mpicxx" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DNO_MPI" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
+		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS}" \
+	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -L${CUDAPATH}/lib64 -lcuda -lcudart"
+
+gnu-compy-cke:
+	make nestedcke \
+	"FC=mpiifort" \
+	"CXX=mpiicpc" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -xcore-avx512 -DUSE_CKE -DNO_MPI" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -xcore-avx512 ${CKE_FLAGS}" \
+	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
+
 nested: nested.o timerMod.o
 	@echo "Linking"
 	$(FC) $(LDFLAGS) -o nested nested.o timerMod.o
 
-nested.o: nested.F90 timerMod.o
+nestedcke: nested.o timerMod.o $(CKE_OBJECTS)
+	@echo "Linking"
+	$(FC) -o nested nested.o timerMod.o $(CKE_OBJECTS) $(LDFLAGS)
+
+nested.o: nested.F90 timerMod.o cke_mod.o
 	@echo "Building nested source"
 	$(FC) -c $(FFLAGS) nested.F90
 
@@ -72,6 +121,15 @@ timerMod.o: timerMod.f90
 	@echo "Building timer module"
 	$(FC) -c $(FFLAGS) timerMod.f90
 
+cke_mod.o: cke_mod.F90
+	@echo "Building cke module"
+	$(FC) -c $(FFLAGS) cke_mod.F90
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+cke.o: cke.hpp cke_impl.hpp
+cke_impl1.o: cke.hpp cke_impl.hpp
+
 clean:
 	/bin/rm -f nested *.o *optrpt *.s *.mod *.MOD
-

@@ -11,7 +11,12 @@
 program nested
 
    use timerMod
+#ifndef NO_MPI
    use mpi
+#endif
+#ifdef USE_CKE
+   use cke_mod
+#endif
    implicit none
 
    integer, parameter :: &
@@ -28,7 +33,7 @@ program nested
    namelist /nested_nml/ nIters, nEdges, nCells, nVertLevels, nAdv
 
    integer :: &
-      i,j,k,n,iEdge,iCell, &! various loop iterators
+      i,k,n,iEdge,iCell, &! various loop iterators
       kmin, kmax            ! loop limits
 
    real (kind=RKIND), parameter :: &
@@ -76,13 +81,15 @@ program nested
       timerData,   &! timer for data transfers to device
       timerOrig,   &! timer for original CPU-optimized form
       timerGPU,    &! timer for a GPU-optimized form
-      timerGPU2     ! timer for a second GPU form
+      timer_cke
 
    ! End preamble
    !-------------
    ! Begin code
 
+#ifndef NO_MPI
    call MPI_Init(ierr)
+#endif
 
    ! Read model size info from namelist input, overwriting defaults
    open (15, file='nested.nml')
@@ -222,6 +229,10 @@ program nested
    !--------------------------------------------------------------------
 
    timerData = timerCreate('Data transfer')
+#ifdef USE_CKE_dont_skip
+   ! if above is just USE_CKE, then skip all but the C++ perf test
+   print *,'skip F90 code'
+#else
    call timerStart(timerData)
 
 #ifdef USE_OPENACC
@@ -435,6 +446,55 @@ program nested
    !$omp target update to(highOrderFlx)
 #endif
    call timerStop(timerData)
+#endif
+
+   !--------------------------------------------------------------------
+   ! C++/Kokkos form
+   !--------------------------------------------------------------------
+#ifdef USE_CKE
+   call kokkos_init()
+
+   call timerStart(timerData)
+   call cke_init(nIters, nEdges, nCells, nVertLevels, nAdv, &
+        nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge, &
+        tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask, &
+        advCoefs, advCoefs3rd, coef3rdOrder)
+   call timerStop(timerData)
+
+   do i = 1,1
+      timer_cke = timerCreate('C++/Kokkos ' // char(48+i))
+      call timerStart(timer_cke)
+      select case(i)
+      case (1)
+         call cke_impl1_run()
+      ! other impls go here
+      end select
+      call timerStop(timer_cke)
+      call timerPrint(timer_cke)
+
+      call timerStart(timerData)
+      call cke_get_results(nEdges, nVertLevels, highOrderFlx)
+      call cke_cleanup()
+      call timerStop(timerData)
+
+      iCell = 0;
+      do iEdge=1,nEdges
+         do k=1,nVertLevels
+            refVal = refFlx(k,iEdge)
+            relErr = abs(highOrderFlx(k,iEdge) - refVal)
+            if (refVal /= 0.0_RKIND) relErr = relErr/abs(refVal)
+            if ((isnan(relErr) .or. relErr > errTol) .and. iCell < 10) then
+               print *,'Error computing highOrderFlx, C++/Kokkos impl', &
+                    i,k,iEdge,highOrderFlx(k,iEdge),refVal
+               iCell = iCell + 1
+            endif
+            highOrderFlx(k,iEdge) = 0.0_RKIND
+         end do
+      end do
+   end do
+
+   call kokkos_finalize()
+#endif
 
    !--------------------------------------------------------------------
    ! Clean up and deallocate
@@ -463,7 +523,9 @@ program nested
               normalThicknessFlux, highOrderFlx, advMaskHighOrder, &
               advCoefs, advCoefs3rd, wgtTmp, sgnTmp)
 
+#ifndef NO_MPI
    call MPI_Finalize(ierr)
+#endif
 
 !***********************************************************************
 
