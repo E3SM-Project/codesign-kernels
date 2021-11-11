@@ -118,6 +118,7 @@ void cke_get_results (const Int nEdges, const Int nVertLevels,
   for (int i = 0; i < d->nEdges; ++i)
     for (int j = 0; j < nvl; ++j)
       highOrderFlx[nvl*i+j] = h(i,j);
+  Kokkos::deep_copy(d->highOrderFlx, 0);
 }
 
 void cke_cleanup () { cke::g_data = nullptr; }

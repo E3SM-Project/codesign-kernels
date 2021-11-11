@@ -66,7 +66,6 @@ GNU for Weaver V100:
 2. make.inc:
 
     EKAT = # path to EKAT install directory
-    CKE_PACK_SIZE = 1
 
 Then
 
@@ -100,7 +99,6 @@ module load gcc/9.1.0 cuda/11.0.3 netcdf-fortran/4.4.5 spectrum-mpi/10.4.0.3-202
 2. make.inc:
 
     EKAT = # ...
-    CKE_PACK_SIZE = 1
 
 Then
 
@@ -129,7 +127,6 @@ Compy:
 2. make.inc:
 
     EKAT = # ...
-    CKE_PACK_SIZE = 8 # for AVX512
 
 Then
 

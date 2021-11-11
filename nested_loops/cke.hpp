@@ -18,6 +18,7 @@ extern "C" {
   void cke_cleanup();
 
   void cke_impl1_run();
+  void cke_impl2_run();
 }
 
 #endif
