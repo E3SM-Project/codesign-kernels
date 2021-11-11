@@ -4,9 +4,8 @@ LDFLAGS =
 
 # if using C++/Kokkos, set
 # * the EKAT installation root dir
-# * CKE_PACK_SIZE
 EKAT = # no default
-include make.inc
+-include make.inc
 CKE_FLAGS = -DUSE_CKE -I${EKAT}/include -I${EKAT}/include/kokkos
 CKE_LIBS = -lstdc++ -L${EKAT}/lib -L${EKAT}/lib64 -lekat -lkokkoscore -ldl
 CKE_OBJECTS = cke_mod.o cke.o cke_impl1.o cke_impl2.o
