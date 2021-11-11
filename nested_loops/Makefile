@@ -6,12 +6,10 @@ LDFLAGS =
 # * the EKAT installation root dir
 # * CKE_PACK_SIZE
 EKAT = # no default
-CKE_PACK_SIZE = 4 # CPU default; want 1 on GPU for max performance, but 4 will work
 include make.inc
-CKE_FLAGS = -DUSE_CKE -DCKE_PACK_SIZE=${CKE_PACK_SIZE} \
-	-I${EKAT}/include -I${EKAT}/include/kokkos
+CKE_FLAGS = -DUSE_CKE -I${EKAT}/include -I${EKAT}/include/kokkos
 CKE_LIBS = -lstdc++ -L${EKAT}/lib -L${EKAT}/lib64 -lekat -lkokkoscore -ldl
-CKE_OBJECTS = cke_mod.o cke.o cke_impl1.o
+CKE_OBJECTS = cke_mod.o cke.o cke_impl1.o cke_impl2.o
 
 dummy:
 	@echo "ERROR: Unknown target"
@@ -76,7 +74,7 @@ gnu-cpu-cke:
 	"FC=mpif90" \
 	"CXX=mpicxx" \
 	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
-	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic ${CKE_FLAGS}" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic ${CKE_FLAGS} -DCKE_PACK_SIZE=4" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
 
 gnu-weaver-cke:
@@ -85,7 +83,7 @@ gnu-weaver-cke:
 	"CXX=mpicxx" \
 	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
-		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS}" \
+		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS} -DCKE_PACK_SIZE=1" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -lcudadevrt -lcudart_static -lrt"
 
 gnu-summit-cke:
@@ -94,7 +92,7 @@ gnu-summit-cke:
 	"CXX=mpicxx" \
 	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DNO_MPI" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
-		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS}" \
+		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS} -DCKE_PACK_SIZE=1" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -L${CUDAPATH}/lib64 -lcuda -lcudart"
 
 gnu-compy-cke:
@@ -102,7 +100,7 @@ gnu-compy-cke:
 	"FC=mpiifort" \
 	"CXX=mpiicpc" \
 	"FFLAGS=-g -O3 -m64 -fopenmp -xcore-avx512 -DUSE_CKE -DNO_MPI" \
-	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -xcore-avx512 ${CKE_FLAGS}" \
+	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -xcore-avx512 ${CKE_FLAGS} -DCKE_PACK_SIZE=8" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
 
 nested: nested.o timerMod.o
@@ -130,6 +128,7 @@ cke_mod.o: cke_mod.F90
 
 cke.o: cke.hpp cke_impl.hpp
 cke_impl1.o: cke.hpp cke_impl.hpp
+cke_impl2.o: cke.hpp cke_impl.hpp
 
 clean:
 	/bin/rm -f nested *.o *optrpt *.s *.mod *.MOD

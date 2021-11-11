@@ -23,6 +23,7 @@ struct Data {
 
   typedef Kokkos::DefaultExecutionSpace ExeSpace;
   typedef Kokkos::LayoutRight Layout; // data layout; can switch to experiment
+  typedef typename Kokkos::TeamPolicy<ExeSpace>::member_type TeamMember;
 
   template <typename Data>
   using View = Kokkos::View<Data,Layout,ExeSpace,Kokkos::MemoryTraits<Kokkos::Restrict>>;
@@ -61,12 +62,18 @@ struct Data {
     const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
     const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder);  
 
-
   Kokkos::RangePolicy<ExeSpace> get_rpolicy_iEdge () const {
     return Kokkos::RangePolicy<Data::ExeSpace>(0, nEdges);
   }
   Kokkos::RangePolicy<ExeSpace> get_rpolicy_iEdge_kPack () const {
     return Kokkos::RangePolicy<Data::ExeSpace>(0, nEdges*nvlpk);
+  }
+
+  Kokkos::TeamPolicy<ExeSpace> get_tpolicy_iEdge () const {
+    if (ekat::OnGpu<ExeSpace>::value)
+      return Kokkos::TeamPolicy<Data::ExeSpace>(nEdges, 128, 1);
+    else 
+      return Kokkos::TeamPolicy<Data::ExeSpace>(nEdges, 1, 1);
   }
 };
 

@@ -461,12 +461,12 @@ program nested
         advCoefs, advCoefs3rd, coef3rdOrder)
    call timerStop(timerData)
 
-   do i = 1,1
+   do i = 1,2
       timer_cke = timerCreate('C++/Kokkos ' // char(48+i))
       call timerStart(timer_cke)
       select case(i)
-      case (1)
-         call cke_impl1_run()
+      case (1); call cke_impl1_run()
+      case (2); call cke_impl2_run()
       ! other impls go here
       end select
       call timerStop(timer_cke)
@@ -474,7 +474,6 @@ program nested
 
       call timerStart(timerData)
       call cke_get_results(nEdges, nVertLevels, highOrderFlx)
-      call cke_cleanup()
       call timerStop(timerData)
 
       iCell = 0;
@@ -493,6 +492,7 @@ program nested
       end do
    end do
 
+   call cke_cleanup()
    call kokkos_finalize()
 #endif
 

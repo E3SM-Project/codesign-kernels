@@ -1,9 +1,11 @@
 #include "cke.hpp"
 #include "cke_impl.hpp"
 
-//sec C++/Kokkos/EKAT demo implementation 1.
+using namespace cke;
 
-namespace cke {
+// C++/Kokkos/EKAT demo implementation 1.
+
+namespace {
 
 struct NestedLoopKernel {
   struct Data d;
@@ -33,11 +35,11 @@ void run (const Data& d) {
   Kokkos::fence();
 }
 
-} // namespace cke
+} // namespace
 
 void cke_impl1_run () {
   const auto d = cke::get_Data_singleton();
   assert(d);
   for (int iter = 0; iter < d->nIters; ++iter)
-    cke::run(*d);
+    run(*d);
 }
