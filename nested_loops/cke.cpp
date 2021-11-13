@@ -63,13 +63,13 @@ void initv (const Scalar* raw, const int d1, const int d2, const std::string& na
 
 void Data::init (
   const Int nIters_, const Int nEdges_, const Int nCells_, const Int nVertLevels_,
-  const Int nAdv_, const Int* nAdvCellsForEdge_, const Int* minLevelCell_,
+  const Int nvldim_, const Int nAdv_, const Int* nAdvCellsForEdge_, const Int* minLevelCell_,
   const Int* maxLevelCell_, const Int* advCellsForEdge_, const Real* tracerCur_,
   const Real* normalThicknessFlux_, const Real* advMaskHighOrder_, const Real* cellMask_,
   const Real* advCoefs_, const Real* advCoefs3rd_, const Real coef3rdOrder_)
 {
   nIters = nIters_; nEdges = nEdges_; nCells = nCells_; nVertLevels = nVertLevels_;
-  nAdv = nAdv_; coef3rdOrder = coef3rdOrder_;
+  nvldim = nvldim_; nAdv = nAdv_; coef3rdOrder = coef3rdOrder_;
   nvlpk = ekat::PackInfo<Data::packn>::num_packs(nVertLevels);
 
   initv(nAdvCellsForEdge_, nEdges, "nAdvCellsForEdge", nAdvCellsForEdge);
@@ -78,10 +78,10 @@ void Data::init (
   initv(advCellsForEdge_, nEdges, nAdv, "advCellsForEdge", advCellsForEdge, -1);
   initv(advCoefs_, nEdges, nAdv, "advCoefs", advCoefs);
   initv(advCoefs3rd_, nEdges, nAdv, "advCoefs3rd", advCoefs3rd);
-  initvpk(tracerCur_, nCells, nVertLevels, "tracerCur", tracerCur);
-  initvpk(cellMask_, nCells, nVertLevels, "cellMask", cellMask);
-  initvpk(normalThicknessFlux_, nEdges, nVertLevels, "normalThicknessFlux", normalThicknessFlux);
-  initvpk(advMaskHighOrder_, nEdges, nVertLevels, "advMaskHighOrder", advMaskHighOrder);
+  initvpk(tracerCur_, nCells, nvldim, "tracerCur", tracerCur);
+  initvpk(cellMask_, nCells, nvldim, "cellMask", cellMask);
+  initvpk(normalThicknessFlux_, nEdges, nvldim, "normalThicknessFlux", normalThicknessFlux);
+  initvpk(advMaskHighOrder_, nEdges, nvldim, "advMaskHighOrder", advMaskHighOrder);
 
   const int npack = ekat::PackInfo<packn>::num_packs(nVertLevels);
   highOrderFlx = Apr2("highOrderFlx", nEdges, npack);
@@ -95,13 +95,13 @@ Data::Ptr get_Data_singleton () { return g_data; }
 
 void cke_init (
   const Int nIters, const Int nEdges, const Int nCells, const Int nVertLevels,
-  const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
+  const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
   const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
   const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
   const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder)
 {
   cke::g_data = std::make_shared<cke::Data>();
-  cke::g_data->init(nIters, nEdges, nCells, nVertLevels, nAdv,
+  cke::g_data->init(nIters, nEdges, nCells, nVertLevels, nvldim, nAdv,
                     nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge,
                     tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask,
                     advCoefs, advCoefs3rd, coef3rdOrder);
@@ -114,10 +114,10 @@ void cke_get_results (const Int nEdges, const Int nVertLevels,
   const auto shof = scalarize(d->highOrderFlx);
   const auto h = Kokkos::create_mirror_view(shof);
   Kokkos::deep_copy(h, shof);
-  const auto nvl = d->nVertLevels;
+  const auto nvldim = d->nvldim;
   for (int i = 0; i < d->nEdges; ++i)
-    for (int j = 0; j < nvl; ++j)
-      highOrderFlx[nvl*i+j] = h(i,j);
+    for (int j = 0; j < nvldim; ++j)
+      highOrderFlx[nvldim*i+j] = h(i,j);
   Kokkos::deep_copy(d->highOrderFlx, 0);
 }
 
