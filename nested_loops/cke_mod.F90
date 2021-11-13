@@ -9,13 +9,13 @@ module cke_mod
      subroutine kokkos_finalize() bind(c)
      end subroutine kokkos_finalize
 
-     subroutine cke_init(nIters, nEdges, nCells, nVertLevels, nAdv, &
+     subroutine cke_init(nIters, nEdges, nCells, nVertLevels, nvldim, nAdv, &
           nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge, &
           tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask, &
           advCoefs, advCoefs3rd, coef3rdOrder) bind(c)
        use iso_c_binding, only: c_int, c_double
        integer(c_int), value, intent(in) :: &
-            nIters, nEdges, nCells, nVertLevels, nAdv
+            nIters, nEdges, nCells, nVertLevels, nvldim, nAdv
        real(c_double), value, intent(in) :: &
             coef3rdOrder
        integer(c_int), intent(in) :: &

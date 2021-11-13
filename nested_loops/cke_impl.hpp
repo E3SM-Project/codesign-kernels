@@ -45,7 +45,7 @@ struct Data {
   typedef View<const Pr**> Acpr2;
 
   // Read-only data from F90.
-  Int nIters, nEdges, nCells, nVertLevels, nAdv, nvlpk;
+  Int nIters, nEdges, nCells, nVertLevels, nvldim, nAdv, nvlpk;
   Real coef3rdOrder;
   Aci1 nAdvCellsForEdge, minLevelCell, maxLevelCell;
   Aci2 advCellsForEdge;
@@ -57,7 +57,7 @@ struct Data {
 
   void init(
     const Int nIters, const Int nEdges, const Int nCells, const Int nVertLevels,
-    const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
+    const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
     const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
     const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
     const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder);  

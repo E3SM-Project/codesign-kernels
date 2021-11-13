@@ -81,8 +81,17 @@ program nested
       timerData,   &! timer for data transfers to device
       timerOrig,   &! timer for original CPU-optimized form
       timerGPU,    &! timer for a GPU-optimized form
-      timer_cke
+      timerGPU2, timer_cke
 
+#ifdef F90_PACK_SIZE
+   integer, parameter :: packn = F90_PACK_SIZE
+#else
+   integer, parameter :: packn = 1
+#endif
+   integer :: nvlpk, nvldim, k0
+   real(RKIND) :: csgnpk(packn), coef2pk(packn), edgeFlxPk(packn)
+#define pkslc(k0) ((k0)+1):((k0)+packn)
+   
    ! End preamble
    !-------------
    ! Begin code
@@ -96,17 +105,20 @@ program nested
    read (15, nml=nested_nml)
    close(15)
 
+   nvlpk = (nVertLevels + packn - 1)/packn
+   nvldim = nvlpk*packn
+
    ! Allocate various arrays
    allocate(nAdvCellsForEdge(nEdges), &
             minLevelCell    (nCells), &
             maxLevelCell    (nCells), &
             advCellsForEdge(nadv, nEdges), &
-            tracerCur          (nVertLevels,ncells), &
-            cellMask           (nVertLevels,ncells), &
-            normalThicknessFlux(nVertLevels,nEdges), &
-            highOrderFlx       (nVertLevels,nEdges), &
-            refFlx             (nVertLevels,nEdges), &
-            advMaskHighOrder(nVertLevels,nEdges), & 
+            tracerCur          (nvldim,ncells), &
+            cellMask           (nvldim,ncells), &
+            normalThicknessFlux(nvldim,nEdges), &
+            highOrderFlx       (nvldim,nEdges), &
+            refFlx             (nvldim,nEdges), &
+            advMaskHighOrder(nvldim,nEdges), & 
             advCoefs   (nadv,nEdges), &
             advCoefs3rd(nadv,nEdges))
 #ifdef USE_OMPOFFLOAD
@@ -446,6 +458,90 @@ program nested
    !$omp target update to(highOrderFlx)
 #endif
    call timerStop(timerData)
+
+   !--------------------------------------------------------------------
+   ! Third loop form - parallel and GPU optimized with k tiling
+   !--------------------------------------------------------------------
+
+   timerGPU2  = timerCreate('GPU Optimized with k tiling')
+   call timerStart(timerGPU2)
+
+   do n =1,nIters
+#ifdef USE_OPENACC
+      !$acc parallel loop gang vector collapse(2) &
+      !$acc    present(normalThicknessFlux, advMaskHighOrder, &
+      !$acc            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx) &
+      !$acc    private(coef2pk, csgnpk, edgeFlxPk)
+#endif
+#ifdef USE_OMPOFFLOAD
+      !$omp target teams &
+      !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
+      !$omp            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$omp            advCoefs, advCoefs3rd, tracerCur) &
+      !$omp    map(from: highOrderFlx)
+      !$omp distribute parallel do collapse(2) &
+      !$omp    private(iCell, coef1, coef2pk, coef3, edgeFlxPk,csgnpk)
+#endif
+      do iEdge = 1, nEdges
+      do k = 0, nvlpk-1
+         k0 = packn*k
+         ! Compute 3rd or 4th fluxes where requested.
+         coef2pk = normalThicknessFlux(pkslc(k0),iEdge)*advMaskHighOrder(pkslc(k0),iEdge)
+         csgnpk = sign(1.0_RKIND,normalThicknessFlux(pkslc(k0),iEdge))
+         edgeFlxPk = 0.0_RKIND
+         do i = 1, nAdvCellsForEdge(iEdge)
+            iCell = advCellsForEdge(i,iEdge)
+            coef1 = advCoefs       (i,iEdge)
+            coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
+            edgeFlxPk = edgeFlxPk + tracerCur(pkslc(k0),iCell)*cellMask(pkslc(k0),iCell)* &
+                 coef2pk*(coef1 + coef3*csgnpk)
+         end do ! i loop over nAdvCellsForEdge
+         highOrderFlx(pkslc(k0),iEdge) = edgeFlxPk
+      end do ! vertical loop
+      end do ! iEdge loop  
+#ifdef USE_OMPOFFLOAD
+      !$omp end distribute parallel do
+      !$omp end target teams
+#endif
+   end do ! iteration loop
+
+   call timerStop(timerGPU2)
+   call timerPrint(timerGPU2)
+
+   !--------------------------------------------------------------------
+   ! Check for correctness and reset result
+   !--------------------------------------------------------------------
+
+   call timerStart(timerData)
+#ifdef USE_OPENACC
+   !$acc update host(highOrderFlx)
+#endif
+#ifdef USE_OMPOFFLOAD
+   !$omp target update from(highOrderFlx)
+#endif
+   call timerStop(timerData)
+   do iEdge=1,nEdges
+   do k=1,nVertLevels
+      refVal = refFlx(k,iEdge)
+      relErr = abs(highOrderFlx(k,iEdge) - refVal)
+      if (refVal /= 0.0_RKIND) relErr = relErr/abs(refVal)
+      if (relErr > errTol) then
+         print *,'Error computing highOrderFlx, loop GPU 2: ', &
+                  k,iEdge,highOrderFlx(k,iEdge),refVal
+      endif
+
+      highOrderFlx(k,iEdge) = 0.0_RKIND
+   end do
+   end do
+   call timerStart(timerData)
+#ifdef USE_OPENACC
+   !$acc update device(highOrderFlx)
+#endif
+#ifdef USE_OMPOFFLOAD
+   !$omp target update to(highOrderFlx)
+#endif
+   call timerStop(timerData)
 #endif
 
    !--------------------------------------------------------------------
@@ -455,7 +551,7 @@ program nested
    call kokkos_init()
 
    call timerStart(timerData)
-   call cke_init(nIters, nEdges, nCells, nVertLevels, nAdv, &
+   call cke_init(nIters, nEdges, nCells, nVertLevels, nvldim, nAdv, &
         nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge, &
         tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask, &
         advCoefs, advCoefs3rd, coef3rdOrder)

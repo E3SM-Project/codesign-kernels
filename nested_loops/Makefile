@@ -72,7 +72,7 @@ gnu-cpu-cke:
 	make nestedcke \
 	"FC=mpif90" \
 	"CXX=mpicxx" \
-	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DF90_PACK_SIZE=4" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic ${CKE_FLAGS} -DCKE_PACK_SIZE=4" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
 
@@ -80,7 +80,7 @@ gnu-weaver-cke:
 	make nestedcke \
 	"FC=mpif90" \
 	"CXX=mpicxx" \
-	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DF90_PACK_SIZE=8" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
 		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS} -DCKE_PACK_SIZE=1" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -lcudadevrt -lcudart_static -lrt"
@@ -89,7 +89,7 @@ gnu-summit-cke:
 	make nestedcke \
 	"FC=mpif90" \
 	"CXX=mpicxx" \
-	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DNO_MPI" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_CKE -DF90_PACK_SIZE=8 -DNO_MPI" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -Wall -pedantic \
 		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS} -DCKE_PACK_SIZE=1" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -L${CUDAPATH}/lib64 -lcuda -lcudart"
@@ -98,7 +98,7 @@ gnu-compy-cke:
 	make nestedcke \
 	"FC=mpiifort" \
 	"CXX=mpiicpc" \
-	"FFLAGS=-g -O3 -m64 -fopenmp -xcore-avx512 -DUSE_CKE -DNO_MPI" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -xcore-avx512 -DUSE_CKE -DNO_MPI -DF90_PACK_SIZE=16" \
 	"CXXFLAGS=-std=c++14 -g -O3 -m64 -fopenmp -xcore-avx512 ${CKE_FLAGS} -DCKE_PACK_SIZE=8" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS}"
 
