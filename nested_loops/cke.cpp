@@ -90,7 +90,7 @@ void initv (const Scalar* raw, const int d1, const int d2, const std::string& na
 void Data::init (
   const Int nIters_, const Int nEdges_, const Int nCells_, const Int nVertLevels_,
   const Int nvldim_, const Int nAdv_, const Int* nAdvCellsForEdge_, const Int* minLevelCell_,
-  const Int* maxLevelCell_, const Int* advCellsForEdge_, const Real* tracerCur_,
+  const Int* maxLevelCell_, const Int* advCellsForEdge_, Real* tracerCur_,
   const Real* normalThicknessFlux_, const Real* advMaskHighOrder_, const Real* cellMask_,
   const Real* advCoefs_, const Real* advCoefs3rd_, const Real coef3rdOrder_,
   Real* highOrderFlx_)
@@ -128,7 +128,7 @@ Data::Ptr get_Data_singleton () { return g_data; }
 void cke_init (
   const Int nIters, const Int nEdges, const Int nCells, const Int nVertLevels,
   const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
-  const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
+  const Int* maxLevelCell, const Int* advCellsForEdge, Real* tracerCur,
   const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
   const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder,
   Real* highOrderFlx)

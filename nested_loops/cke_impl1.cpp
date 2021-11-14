@@ -7,10 +7,17 @@ using namespace cke;
 
 namespace {
 
-struct NestedLoopKernel {
-  struct Data d;
-  NestedLoopKernel (const Data& d_) : d(d_) {}
-  KOKKOS_FORCEINLINE_FUNCTION void operator() (const Int iEdge, const Int k) const {
+void run (const Data& d) {
+  const auto f1 = KOKKOS_LAMBDA(const int idx) {
+    int iCell, k;
+    d.get_iCell_kPack_idxs(idx, iCell, k);
+    d.tracerCur(iCell,k) *= d.cellMask(iCell,k);
+  };
+  Kokkos::parallel_for(d.get_rpolicy_iCell_kPack(), f1);
+  Kokkos::fence();
+  const auto f2 = KOKKOS_LAMBDA(const int idx) {
+    int iEdge, k;
+    d.get_iEdge_kPack_idxs(idx, iEdge, k);
     const auto coef2 = d.normalThicknessFlux(iEdge,k)*d.advMaskHighOrder(iEdge,k);
     Data::Pr csgn; {
       const auto ntf = d.normalThicknessFlux(iEdge,k);
@@ -23,15 +30,11 @@ struct NestedLoopKernel {
       const auto coef1 = d.advCoefs(iEdge,i);
       const auto coef3 = d.advCoefs3rd(iEdge,i)*d.coef3rdOrder;
       const auto iCell = d.advCellsForEdge(iEdge,i);
-      edgeFlx += d.tracerCur(iCell,k)*d.cellMask(iCell,k)*coef2*(coef1 + coef3*csgn);
+      edgeFlx += d.tracerCur(iCell,k)*coef2*(coef1 + coef3*csgn);
     }
     d.highOrderFlx(iEdge,k) = edgeFlx;
-  }
-};
-
-void run (const Data& d) {
-  NestedLoopKernel nlk(d);
-  parfor_iEdge_kPack(d, nlk);
+  };
+  Kokkos::parallel_for(d.get_rpolicy_iEdge_kPack(), f2);
   Kokkos::fence();
 }
 
