@@ -554,7 +554,7 @@ program nested
    call cke_init(nIters, nEdges, nCells, nVertLevels, nvldim, nAdv, &
         nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge, &
         tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask, &
-        advCoefs, advCoefs3rd, coef3rdOrder)
+        advCoefs, advCoefs3rd, coef3rdOrder, highOrderFlx)
    call timerStop(timerData)
 
    do i = 1,2

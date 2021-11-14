@@ -60,7 +60,8 @@ struct Data {
     const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
     const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
     const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
-    const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder);  
+    const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder,
+    Real* highOrderFlx);  
 
   Kokkos::RangePolicy<ExeSpace> get_rpolicy_iEdge () const {
     return Kokkos::RangePolicy<Data::ExeSpace>(0, nEdges);

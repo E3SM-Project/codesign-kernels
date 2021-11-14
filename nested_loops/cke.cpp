@@ -92,7 +92,8 @@ void Data::init (
   const Int nvldim_, const Int nAdv_, const Int* nAdvCellsForEdge_, const Int* minLevelCell_,
   const Int* maxLevelCell_, const Int* advCellsForEdge_, const Real* tracerCur_,
   const Real* normalThicknessFlux_, const Real* advMaskHighOrder_, const Real* cellMask_,
-  const Real* advCoefs_, const Real* advCoefs3rd_, const Real coef3rdOrder_)
+  const Real* advCoefs_, const Real* advCoefs3rd_, const Real coef3rdOrder_,
+  Real* highOrderFlx_)
 {
   nIters = nIters_; nEdges = nEdges_; nCells = nCells_; nVertLevels = nVertLevels_;
   nvldim = nvldim_; nAdv = nAdv_; coef3rdOrder = coef3rdOrder_;
@@ -110,7 +111,12 @@ void Data::init (
   initvpk(advMaskHighOrder_, nEdges, nvldim, "advMaskHighOrder", advMaskHighOrder);
 
   const int npack = ekat::PackInfo<packn>::num_packs(nVertLevels);
-  highOrderFlx = Apr2("highOrderFlx", nEdges, npack);
+#ifdef CKE_SAME_MEMORY
+  if ( ! ekat::OnGpu<ExeSpace>::value && layout_right && nvldim % Pr::n == 0)
+    highOrderFlx = Apr2(reinterpret_cast<Pr*>(highOrderFlx_), nEdges, npack);
+  else
+#endif
+    highOrderFlx = Apr2("highOrderFlx", nEdges, npack);
 }
 
 static Data::Ptr g_data;
@@ -124,23 +130,28 @@ void cke_init (
   const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
   const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
   const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
-  const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder)
+  const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder,
+  Real* highOrderFlx)
 {
   cke::g_data = std::make_shared<cke::Data>();
   cke::g_data->init(nIters, nEdges, nCells, nVertLevels, nvldim, nAdv,
                     nAdvCellsForEdge, minLevelCell, maxLevelCell, advCellsForEdge,
                     tracerCur, normalThicknessFlux, advMaskHighOrder, cellMask,
-                    advCoefs, advCoefs3rd, coef3rdOrder);
+                    advCoefs, advCoefs3rd, coef3rdOrder, highOrderFlx);
 }
 
-void cke_get_results (const Int nEdges, const Int nVertLevels,
-                      Real* highOrderFlx) {
+void cke_get_results (const Int, const Int, Real* highOrderFlx) {
   const auto d = cke::g_data;
   assert(d);
+  const auto nvldim = d->nvldim;
+#ifdef CKE_SAME_MEMORY
+  if ( ! ekat::OnGpu<cke::Data::ExeSpace>::value && cke::layout_right &&
+       nvldim % cke::Data::Pr::n == 0)
+    return;
+#endif
   const auto shof = scalarize(d->highOrderFlx);
   const auto h = Kokkos::create_mirror_view(shof);
   Kokkos::deep_copy(h, shof);
-  const auto nvldim = d->nvldim;
   for (int i = 0; i < d->nEdges; ++i)
     for (int j = 0; j < nvldim; ++j)
       highOrderFlx[nvldim*i+j] = h(i,j);
