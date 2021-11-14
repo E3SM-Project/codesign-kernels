@@ -478,9 +478,8 @@ program nested
       !$omp distribute parallel do collapse(2)
 #endif      
       do iCell = 1, nCells
-         do k = 0, nvlpk-1
-            k0 = packn*k
-            tracerCur(pkslc(k0),iCell) = tracerCur(pkslc(k0),iCell)*cellMask(pkslc(k0),iCell)
+         do k = 1, nVertLevels
+            tracerCur(k,iCell) = tracerCur(k,iCell)*cellMask(k,iCell)
          end do
       end do
 #ifdef USE_OMPOFFLOAD
