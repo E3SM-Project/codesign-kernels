@@ -15,11 +15,24 @@ void kokkos_finalize () {
 
 namespace cke {
 
+#ifdef CKE_SAME_MEMORY
+static constexpr bool layout_right = std::is_same<Data::Layout, Kokkos::LayoutRight>::value;
+#endif
+
 // Initialize a View<const Pack<Real,packn>**> from raw(1:d1,1:d2), where dim 2
 // has the fast index.
 template <typename Scalar, typename V> static void
 initvpk (const Scalar* raw, const int d1, const int d2, const std::string& name, V& v,
          typename std::enable_if<V::value_type::packtag>::type* = 0) {
+  // If not on the GPU and other conditions are met, we can use the same memory
+  // in F90 and C++.
+#ifdef CKE_SAME_MEMORY
+  if ( ! ekat::OnGpu<typename V::execution_space>::value &&
+       layout_right && d2 % V::value_type::n == 0) {
+    v = V(reinterpret_cast<const typename V::value_type*>(raw), d1, d2/V::value_type::n);
+    return;
+  }
+#endif
   // Get the number of packs that cover the scalar length.
   const int d2pk = ekat::PackInfo<V::value_type::n>::num_packs(d2);
   // Allocate the view as writeable.
@@ -42,6 +55,12 @@ initvpk (const Scalar* raw, const int d1, const int d2, const std::string& name,
 template <typename Scalar, typename V> static
 void initv (const Scalar* raw, const int d1, const std::string& name, V& v,
             const Scalar delta = 0) {
+#ifdef CKE_SAME_MEMORY
+  if ( ! ekat::OnGpu<typename V::execution_space>::value && delta == 0) {
+    v = V(raw, d1);
+    return;
+  }
+#endif
   const auto vnc = typename V::non_const_type(name, d1);
   const auto h = Kokkos::create_mirror_view(vnc);
   for (int i = 0; i < d1; ++i) h(i) = raw[i] + delta;
@@ -52,6 +71,13 @@ void initv (const Scalar* raw, const int d1, const std::string& name, V& v,
 template <typename Scalar, typename V> static
 void initv (const Scalar* raw, const int d1, const int d2, const std::string& name,
             V& v, const Scalar delta = 0) {
+#ifdef CKE_SAME_MEMORY
+  if ( ! ekat::OnGpu<typename V::execution_space>::value &&
+       layout_right && delta == 0) {
+    v = V(raw, d1, d2);
+    return;
+  }
+#endif
   const auto vnc = typename V::non_const_type(name, d1, d2);
   const auto h = Kokkos::create_mirror_view(vnc);
   for (int i = 0; i < d1; ++i)

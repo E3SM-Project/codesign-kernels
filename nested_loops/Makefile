@@ -94,7 +94,7 @@ gnu-summit-cke:
 		-arch=sm_70 --expt-extended-lambda ${CKE_FLAGS} -DCKE_PACK_SIZE=1" \
 	"LDFLAGS=-O3 -m64 -fopenmp ${CKE_LIBS} -L${CUDAPATH}/lib64 -lcuda -lcudart"
 
-gnu-compy-cke:
+intel-compy-cke:
 	make nestedcke \
 	"FC=mpiifort" \
 	"CXX=mpiicpc" \
