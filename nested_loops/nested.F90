@@ -469,15 +469,35 @@ program nested
    do n =1,nIters
 #ifdef USE_OPENACC
       !$acc parallel loop gang vector collapse(2) &
+      !$acc    present(tracerCur, cellMask)
+#endif
+#ifdef USE_OMPOFFLOAD
+      !$omp target teams &
+      !$omp    map(to: tracerCur, cellMask) &
+      !$omp    map(from: tracerCur)
+      !$omp distribute parallel do collapse(2)
+#endif      
+      do iCell = 1, nCells
+         do k = 0, nvlpk-1
+            k0 = packn*k
+            tracerCur(pkslc(k0),iCell) = tracerCur(pkslc(k0),iCell)*cellMask(pkslc(k0),iCell)
+         end do
+      end do
+#ifdef USE_OMPOFFLOAD
+      !$omp end distribute parallel do
+      !$omp end target teams
+#endif
+#ifdef USE_OPENACC
+      !$acc parallel loop gang vector collapse(2) &
       !$acc    present(normalThicknessFlux, advMaskHighOrder, &
-      !$acc            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$acc            nAdvCellsForEdge, advCellsForEdge, &
       !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx) &
       !$acc    private(coef2pk, csgnpk, edgeFlxPk)
 #endif
 #ifdef USE_OMPOFFLOAD
       !$omp target teams &
       !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
-      !$omp            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$omp            nAdvCellsForEdge, advCellsForEdge, &
       !$omp            advCoefs, advCoefs3rd, tracerCur) &
       !$omp    map(from: highOrderFlx)
       !$omp distribute parallel do collapse(2) &
@@ -494,7 +514,7 @@ program nested
             iCell = advCellsForEdge(i,iEdge)
             coef1 = advCoefs       (i,iEdge)
             coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
-            edgeFlxPk = edgeFlxPk + tracerCur(pkslc(k0),iCell)*cellMask(pkslc(k0),iCell)* &
+            edgeFlxPk = edgeFlxPk + tracerCur(pkslc(k0),iCell)* &
                  coef2pk*(coef1 + coef3*csgnpk)
          end do ! i loop over nAdvCellsForEdge
          highOrderFlx(pkslc(k0),iEdge) = edgeFlxPk
