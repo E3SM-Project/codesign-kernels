@@ -11,7 +11,7 @@ extern "C" {
   void cke_init(
     const Int nIters, const Int nEdges, const Int nCells, const Int nVertLevels,
     const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
-    const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
+    const Int* maxLevelCell, const Int* advCellsForEdge, Real* tracerCur,
     const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
     const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder,
     Real* highOrderFlx);

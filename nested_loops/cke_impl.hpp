@@ -50,7 +50,8 @@ struct Data {
   Aci1 nAdvCellsForEdge, minLevelCell, maxLevelCell;
   Aci2 advCellsForEdge;
   Acr2 advCoefs, advCoefs3rd;
-  Acpr2 tracerCur, cellMask, normalThicknessFlux, advMaskHighOrder;
+  Apr2 tracerCur;
+  Acpr2 cellMask, normalThicknessFlux, advMaskHighOrder;
 
   // Output.
   Apr2 highOrderFlx;
@@ -58,10 +59,29 @@ struct Data {
   void init(
     const Int nIters, const Int nEdges, const Int nCells, const Int nVertLevels,
     const Int nvldim, const Int nAdv, const Int* nAdvCellsForEdge, const Int* minLevelCell,
-    const Int* maxLevelCell, const Int* advCellsForEdge, const Real* tracerCur,
+    const Int* maxLevelCell, const Int* advCellsForEdge, Real* tracerCur,
     const Real* normalThicknessFlux, const Real* advMaskHighOrder, const Real* cellMask,
     const Real* advCoefs, const Real* advCoefs3rd, const Real coef3rdOrder,
-    Real* highOrderFlx);  
+    Real* highOrderFlx);
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  void get_iEdge_kPack_idxs (const int idx, int& iEdge, int& k) const {
+    iEdge = idx / nvlpk;
+    k = idx % nvlpk;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  void get_iCell_kPack_idxs (const int idx, int& iCell, int& k) const {
+    iCell = idx / nvlpk;
+    k = idx % nvlpk;
+  }
+
+  Kokkos::RangePolicy<ExeSpace> get_rpolicy_iCell () const {
+    return Kokkos::RangePolicy<Data::ExeSpace>(0, nCells);
+  }
+  Kokkos::RangePolicy<ExeSpace> get_rpolicy_iCell_kPack () const {
+    return Kokkos::RangePolicy<Data::ExeSpace>(0, nCells*nvlpk);
+  }
 
   Kokkos::RangePolicy<ExeSpace> get_rpolicy_iEdge () const {
     return Kokkos::RangePolicy<Data::ExeSpace>(0, nEdges);
