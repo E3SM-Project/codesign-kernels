@@ -473,8 +473,8 @@ program nested
 #endif
 #ifdef USE_OMPOFFLOAD
       !$omp target teams &
-      !$omp    map(to: tracerCur, cellMask) &
-      !$omp    map(from: tracerCur)
+      !$omp    map(to: cellMask) &
+      !$omp    map(tofrom: tracerCur)
       !$omp distribute parallel do collapse(2)
 #endif      
       do iCell = 1, nCells
@@ -500,7 +500,7 @@ program nested
       !$omp            advCoefs, advCoefs3rd, tracerCur) &
       !$omp    map(from: highOrderFlx)
       !$omp distribute parallel do collapse(2) &
-      !$omp    private(iCell, coef1, coef2pk, coef3, edgeFlxPk,csgnpk)
+      !$omp    private(iCell, k0, coef1, coef2pk, coef3, edgeFlxPk, csgnpk)
 #endif
       do iEdge = 1, nEdges
       do k = 0, nvlpk-1
