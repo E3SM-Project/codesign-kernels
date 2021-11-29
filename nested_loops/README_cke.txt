@@ -130,4 +130,4 @@ Compy:
 
 Then
 
-    make gnu-cpu-cke
+    make intel-cpu-cke

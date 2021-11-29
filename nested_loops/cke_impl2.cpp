@@ -1,7 +1,10 @@
 #include "cke.hpp"
 #include "cke_impl.hpp"
 
-// C++/Kokkos/EKAT demo implementation 2.
+// C++/Kokkos/EKAT demo implementation 2. This code demonstrates hierarchical
+// parallelism, including suing shared scratch memory. It isn't very fast
+// because for this particular kernel, hierarchical ||ism is not well motivated.
+// A little bit of work might speed it up a little, though.
 
 using namespace cke;
 
