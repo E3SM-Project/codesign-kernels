@@ -26,10 +26,11 @@ program nested
       subroutine yakl_init()  bind(C,name="yakl_init")
       end subroutine
 
-      subroutine yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv) &
+      subroutine yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv,coef3rd) &
                     bind(C,name="yakl_init_arrays")
         use iso_c_binding
         integer(c_int), intent(in), value :: nvldim,nEdges,nCells,nVertLevels,nadv
+        real(c_double), intent(in), value :: coef3rd
       end subroutine
    end interface
 
@@ -106,7 +107,8 @@ program nested
    end do
 
 #ifdef USE_YAKL
-   call yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv)
+   coef1 = coef3rdOrder
+   call yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv,coef1)
 #endif
 
    !--------------------------------------------------------------------
@@ -567,6 +569,12 @@ contains
    subroutine run_gpu_optimized_yakl
    
    interface
+      subroutine yakl_check(h_cellMask,h_tracerCur) &
+                 bind(C,name="yakl_check")
+        use iso_c_binding
+        real(c_double), intent(in), value, dimension(*) :: h_cellMask,h_tracerCur
+      end subroutine
+
       subroutine yakl_gpu_optimized(h_highOrderFlx,h_tracerCur,h_normalThicknessFlux) &
                  bind(C,name="yakl_gpu_optimized")
         use iso_c_binding
@@ -575,6 +583,7 @@ contains
       end subroutine
    end interface
    
+   !call yakl_check(cellMask,tracerCur)
    call yakl_gpu_optimized(highOrderFlx,tracerCur,normalThicknessFlux)   
 
    end subroutine run_gpu_optimized_yakl

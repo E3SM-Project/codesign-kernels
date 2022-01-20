@@ -150,7 +150,8 @@ void yakl_init_arrays( int fnvldim,
                 int fnEdges,
                 int fnCells,
                 int fnVertLevels,
-                int fnAdv)
+                int fnAdv,
+                double fcoef3rdOrder)
 {
     using namespace nested;
 
@@ -159,7 +160,8 @@ void yakl_init_arrays( int fnvldim,
     nCells = fnCells;
     nVertLevels = fnVertLevels;
     nAdv = fnAdv;
-
+    coef3rdOrder = fcoef3rdOrder;
+    
     maxLevelCell = yakl_wrap_array(c_maxLevelCell, nCells);
     minLevelCell = yakl_wrap_array(c_minLevelCell, nCells);
     
@@ -232,6 +234,35 @@ void yakl_original_loop(double * h_highOrderFlx, double * h_tracerCur,
     yakl_update_host(nested::highOrderFlx, h_highOrderFlx);
 }
 
+extern "C" 
+void yakl_check(double * h_cellMask, double * h_tracerCur)
+{
+    yakl_update_device(nested::tracerCur, h_tracerCur);
+
+    YAKL_LOCAL_NS(nested, cellMask);
+    YAKL_LOCAL_NS(nested, tracerCur);
+
+    h_double_2d_t   hcmask("hcmask", h_cellMask, nvldim, nCells);
+    h_double_2d_t   tracer("tracer", h_tracerCur, nvldim, nCells);
+    for ( int n = 1; n <= nCells; ++n )
+    {
+        for ( int k = 1; k <= nVertLevels; ++k )
+        {
+            if ( hcmask(k,n) != cellMask(k,n) )
+            {
+                fprintf(stderr, "cellMask: Expected %lf, but got %lf, for k,n = %d, %d\n",
+                    hcmask(k,n), cellMask(k,n), k, n);
+            }
+
+            if ( tracer(k,n) != tracerCur(k,n) )
+            {
+                fprintf(stderr, "tracerCur: Expected %lf, but got %lf, for k,n = %d, %d\n",
+                    tracer(k,n), tracerCur(k,n), k, n);
+            }
+        }
+    }
+}
+
 extern "C"
 void yakl_gpu_optimized(double * h_highOrderFlx, double * h_tracerCur,
                         double * h_normalThicknessFlux)
@@ -239,10 +270,6 @@ void yakl_gpu_optimized(double * h_highOrderFlx, double * h_tracerCur,
     yakl_update_device(nested::tracerCur, h_tracerCur);
     yakl_update_device(nested::normalThicknessFlux, h_normalThicknessFlux);
 
-    YAKL_LOCAL_NS(nested, wgtTmp);
-    YAKL_LOCAL_NS(nested, sgnTmp);
-    YAKL_LOCAL_NS(nested, minLevelCell);
-    YAKL_LOCAL_NS(nested, maxLevelCell);
     YAKL_LOCAL_NS(nested, tracerCur);
     YAKL_LOCAL_NS(nested, highOrderFlx);
     YAKL_LOCAL_NS(nested, normalThicknessFlux);
@@ -255,6 +282,7 @@ void yakl_gpu_optimized(double * h_highOrderFlx, double * h_tracerCur,
     YAKL_LOCAL_VAR(nVertLevels);
     YAKL_LOCAL_VAR(coef3rdOrder);
 
+    
     yakl::fortran::parallel_for( yakl::fortran::Bounds<2>({1,nEdges},{1,nVertLevels}) ,
     YAKL_LAMBDA(int iEdge, int k)
     {

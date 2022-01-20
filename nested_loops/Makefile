@@ -84,6 +84,16 @@ nested-yakl-amd:
 	"CXXFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -std=c++17 -DYAKL_ARCH_HIP -D__HIP_ROCclr__ -D__HIP_ARCH_GFX908__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -I./YAKL/src" \
 	"LDFLAGS=-O3 -m64 -L${HIP_PATH}/lib -L./YAKL/build -lyakl -lamdhip64 -lstdc++"
 
+nested-yakl-amd-cpu:
+	make nestedyakl \
+	"FC=flang" \
+	"CXX=clang++" \
+	"YARCH=" \
+	"CPPFLAGS=-DUSE_YAKL -DNO_MPI -P -traditional" \
+	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_YAKL -DNO_MPI -DF90_PACK_SIZE=4" \
+	"CXXFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -std=c++17 -I./YAKL/src" \
+	"LDFLAGS=-O3 -m64 -L${HIP_PATH}/lib -L./YAKL/build -lyakl -lstdc++"
+
 	
 gnu-cpu-cke:
 	make nestedcke \
@@ -131,7 +141,7 @@ nested: nested.o timerMod.o nested_vars.o
 libYAKL:
 	if [ -e ./YAKL/.git ]; then \
 		(echo "Building YAKL..."); \
-		(cd YAKL; git submodule update --init --recursive; mkdir -p build; cd build; FFLAGS="" LDFLAGS="" cmake -DYAKL_ARCH=${YARCH} ..; make -j 8 VERBOSE=ON; cd ../..) \
+		(cd YAKL; git submodule update --init --recursive; mkdir -p build; cd build; FFLAGS="" LDFLAGS="" CXXFLAGS="" cmake -DYAKL_ARCH=${YARCH} ..; make -j 8 VERBOSE=ON; cd ../..) \
 	else \
 		(echo "Missing ./YAKL/.git, did you forget to 'git submodule update --init --recursive' ?"; exit 1) \
 	fi
@@ -170,4 +180,4 @@ cke_impl1.o: cke.hpp cke_impl.hpp
 cke_impl2.o: cke.hpp cke_impl.hpp
 
 clean:
-	/bin/rm -f nested *.o *optrpt *.s *.mod *.MOD
+	/bin/rm -rf nested *.o *optrpt *.s *.mod *.MOD ./YAKL/build/*
