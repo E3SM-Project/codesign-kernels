@@ -11,87 +11,29 @@
 program nested
 
    use timerMod
+   use nested_vars
+   use iso_c_binding
 #ifndef NO_MPI
    use mpi
 #endif
 #ifdef USE_CKE
    use cke_mod
 #endif
-   implicit none
 
-   integer, parameter :: &
-      RKIND = selected_real_kind(12) ! default double precision
-
-   integer ::       &! model size variables
-      ierr,         &! error flag
-      nIters,       &! number of loop iterations to run
-      nEdges,       &! number of edges
-      nCells,       &! number of cells
-      nVertLevels,  &! number of vertical levels
-      nAdv           ! max num cells contributing to edge for advection
-
-   namelist /nested_nml/ nIters, nEdges, nCells, nVertLevels, nAdv
-
-   integer :: &
-      i,k,n,iEdge,iCell, &! various loop iterators
-      kmin, kmax            ! loop limits
-
-   real (kind=RKIND), parameter :: &
-      coef3rdOrder = 2.14, &! an advection parameter
-      errTol       = 1.d-10 ! error tolerance
-
-   integer, dimension(:), allocatable :: &
-      nAdvCellsForEdge, &! num cells contributing to each edge 
-      minLevelCell,     &! min vert level at cell center
-      maxLevelCell       ! max vert level at cell center
-
-   integer, dimension(:,:), allocatable :: &
-      advCellsForEdge  ! address of each cell contrib to edge
-
-   real (kind=RKIND) :: &
-      relErr,           &! relative error in result
-      refVal,           &! reference value for correctness
-      edgeFlx            ! temp for contrib to edge fluxes
-
-#ifdef USE_OMPOFFLOAD
-   ! current OpenMP offload doesn't support array private so
-   ! need to promote these temps
-   real (kind=RKIND), dimension(:,:), allocatable :: &
-      wgtTmp, sgnTmp   ! temp vert vectors for high-order flux
-#else
-   real (kind=RKIND), dimension(:), allocatable :: &
-      wgtTmp, sgnTmp, flxTmp   ! temp vert vectors for high-order flux
-#endif
-
-   real (kind=RKIND), dimension(:,:), allocatable :: &
-      tracerCur,             &! current tracer values
-      normalThicknessFlux,   &! thickness flux normal to edge
-      advMaskHighOrder,      &! mask for using high-order advection
-      cellMask,              &! mask for active cells
-      highOrderFlx,          &! temp for holding high-order adv flux
-      refFlx,                &! reference value for high-order adv flux
-      advCoefs,              &! precomputed adv coefficients
-      advCoefs3rd             ! precomputed adv coefficients 3rd-order
-
-   real (kind=RKIND) :: &
-      coef1,coef2,coef3,csgn, &! various local temps 
-      randNum           ! random number
- 
-   type (Timer) :: &! various timers for timing loop forms
-      timerData,   &! timer for data transfers to device
-      timerOrig,   &! timer for original CPU-optimized form
-      timerGPU,    &! timer for a GPU-optimized form
-      timerGPU2, timer_cke
-
-#ifdef F90_PACK_SIZE
-   integer, parameter :: packn = F90_PACK_SIZE
-#else
-   integer, parameter :: packn = 1
-#endif
-   integer :: nvlpk, nvldim, k0
-   real(RKIND) :: csgnpk(packn), coef2pk(packn), edgeFlxPk(packn)
 #define pkslc(k0) ((k0)+1):((k0)+packn)
-   
+
+  interface
+      subroutine yakl_init()  bind(C,name="yakl_init")
+      end subroutine
+
+      subroutine yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv,coef3rd) &
+                    bind(C,name="yakl_init_arrays")
+        use iso_c_binding
+        integer(c_int), intent(in), value :: nvldim,nEdges,nCells,nVertLevels,nadv
+        real(c_double), intent(in), value :: coef3rd
+      end subroutine
+   end interface
+
    ! End preamble
    !-------------
    ! Begin code
@@ -100,37 +42,10 @@ program nested
    call MPI_Init(ierr)
 #endif
 
-   ! Read model size info from namelist input, overwriting defaults
-   open (15, file='nested.nml')
-   read (15, nml=nested_nml)
-   close(15)
-
-   nvlpk = (nVertLevels + packn - 1)/packn
-   nvldim = nvlpk*packn
-
-   ! Allocate various arrays
-   allocate(nAdvCellsForEdge(nEdges), &
-            minLevelCell    (nCells), &
-            maxLevelCell    (nCells), &
-            advCellsForEdge(nadv, nEdges), &
-            tracerCur          (nvldim,ncells), &
-            cellMask           (nvldim,ncells), &
-            normalThicknessFlux(nvldim,nEdges), &
-            highOrderFlx       (nvldim,nEdges), &
-            refFlx             (nvldim,nEdges), &
-            advMaskHighOrder(nvldim,nEdges), & 
-            advCoefs   (nadv,nEdges), &
-            advCoefs3rd(nadv,nEdges))
-#ifdef USE_OMPOFFLOAD
-   ! current OMP offload doesn't support private arrays so
-   ! need to promote these to 2-d arrays
-   allocate(wgtTmp(nVertLevels,nEdges), &
-            sgnTmp(nVertLevels,nEdges))
-#else
-   allocate(wgtTmp(nVertLevels), &
-            sgnTmp(nVertLevels), &
-            flxTmp(nVertLevels))
+#ifdef USE_YAKL
+    call yakl_init
 #endif
+    call alloc_vars
 
    !--------------------------------------------------------------------
    ! Initialize various arrays. For this kernel test, the actual value
@@ -190,6 +105,11 @@ program nested
       advMaskHighOrder   (k,iEdge) = 1.0_RKIND
    end do
    end do
+
+#ifdef USE_YAKL
+   coef1 = coef3rdOrder
+   call yakl_init_arrays(nvldim,nEdges,nCells,nVertLevels,nadv,coef1)
+#endif
 
    !--------------------------------------------------------------------
    ! Use original form on CPU for the reference value to check
@@ -269,73 +189,10 @@ program nested
    call timerStart(timerOrig)
 
    do n =1,nIters
-#ifdef USE_OPENACC
-      !$acc parallel loop gang vector &
-      !$acc    present(normalThicknessFlux, advMaskHighOrder, &
-      !$acc            nAdvCellsForEdge, advCellsForEdge, &
-      !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx) &
-      !$acc    private(wgtTmp, sgnTmp, flxTmp)
-#endif
-#ifdef USE_OMPOFFLOAD
-      !$omp target teams &
-      !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
-      !$omp            nAdvCellsForEdge, advCellsForEdge, &
-      !$omp            advCoefs, advCoefs3rd, tracerCur, &
-      !$omp            wgtTmp, sgnTmp) &
-      !$omp    map(from: highOrderFlx)
-      !$omp distribute parallel do
-#endif
-      do iEdge = 1, nEdges
-         ! compute some common intermediate factors
-#ifdef USE_OMPOFFLOAD
-         do k = 1, nVertLevels
-            wgtTmp(k,iEdge) = normalThicknessFlux   (k,iEdge)* &
-                        advMaskHighOrder(k,iEdge)
-            sgnTmp(k,iEdge) = sign(1.0_RKIND, &
-                             normalThicknessFlux(k,iEdge))
-            highOrderFlx(k,iEdge) = 0.0_RKIND
-         end do
+#ifdef USE_YAKL
+      call run_original_cpu_yakl()
 #else
-         do k = 1, nVertLevels
-            wgtTmp(k) = normalThicknessFlux   (k,iEdge)* &
-                        advMaskHighOrder(k,iEdge)
-            sgnTmp(k) = sign(1.0_RKIND, &
-                             normalThicknessFlux(k,iEdge))
-            flxTmp(k) = 0.0_RKIND
-         end do
-#endif
-
-         ! Compute 3rd or 4th fluxes where requested.
-         do i = 1, nAdvCellsForEdge(iEdge)
-            iCell = advCellsForEdge(i,iEdge)
-            kmin  = minLevelCell(iCell)
-            kmax  = maxLevelCell(iCell)
-            coef1 = advCoefs       (i,iEdge)
-            coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
-#ifdef USE_OMPOFFLOAD
-            do k = kmin, kmax
-               highOrderFlx(k,iEdge) = highOrderFlx(k,iEdge) + tracerCur(k,iCell)* &
-                           wgtTmp(k,iEdge)*(coef1 + coef3*sgnTmp(k,iEdge))
-            end do ! k loop
-#else
-            do k = kmin, kmax
-               !highOrderFlx(k,iEdge) = highOrderFlx(k,iEdge) + tracerCur(k,iCell)* &
-               !            wgtTmp(k)*(coef1 + coef3*sgnTmp(k))
-               flxTmp(k) = flxTmp(k) + tracerCur(k,iCell)* &
-                           wgtTmp(k)*(coef1 + coef3*sgnTmp(k))
-            enddo ! k loop
-#endif
-         end do ! i loop over nAdvCellsForEdge
-#ifndef USE_OMPOFFLOAD
-         do k = 1,nVertLevels
-            highOrderFlx(k,iEdge) = flxTmp(k)
-         end do
-#endif
-  
-      end do ! edge loop
-#ifdef USE_OMPOFFLOAD
-      !$omp end distribute parallel do
-      !$omp end target teams
+      call run_original_cpu_directive()
 #endif
    end do ! iteration loop
 
@@ -354,7 +211,8 @@ program nested
    !$omp target update from(highOrderFlx)
 #endif
    call timerStop(timerData)
-   do iEdge=1,nEdges
+   do iEdge=1,0
+   !do iEdge=1,nEdges
    do k=1,nVertLevels
       refVal = refFlx(k,iEdge)
       relErr = abs(highOrderFlx(k,iEdge) - refVal)
@@ -384,41 +242,10 @@ program nested
    call timerStart(timerGPU)
 
    do n =1,nIters
-#ifdef USE_OPENACC
-      !$acc parallel loop gang vector collapse(2) &
-      !$acc    present(normalThicknessFlux, advMaskHighOrder, &
-      !$acc            nAdvCellsForEdge, advCellsForEdge, cellMask, &
-      !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx)
-#endif
-#ifdef USE_OMPOFFLOAD
-      !$omp target teams &
-      !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
-      !$omp            nAdvCellsForEdge, advCellsForEdge, cellMask, &
-      !$omp            advCoefs, advCoefs3rd, tracerCur) &
-      !$omp    map(from: highOrderFlx)
-      !$omp distribute parallel do collapse(2) &
-      !$omp    private(iCell, coef1, coef2, coef3, edgeFlx,csgn)
-#endif
-      do iEdge = 1, nEdges
-      do k = 1, nVertLevels
-         ! Compute 3rd or 4th fluxes where requested.
-         coef2 = normalThicknessFlux(k,iEdge)*advMaskHighOrder(k,iEdge)
-         csgn = sign(1.0_RKIND,normalThicknessFlux(k,iEdge))
-         edgeFlx = 0.0_RKIND
-         do i = 1, nAdvCellsForEdge(iEdge)
-            iCell = advCellsForEdge(i,iEdge)
-            coef1 = advCoefs       (i,iEdge)
-            coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
-            edgeFlx = edgeFlx + tracerCur(k,iCell)*cellMask(k,iCell)* &
-                      coef2 * (coef1 + coef3*csgn)
-         end do ! i loop over nAdvCellsForEdge
-      
-         highOrderFlx(k,iEdge) = edgeFlx
-      end do ! vertical loop
-      end do ! iEdge loop  
-#ifdef USE_OMPOFFLOAD
-      !$omp end distribute parallel do
-      !$omp end target teams
+#ifdef USE_YAKL
+      call run_gpu_optimized_yakl()
+#else
+      call run_gpu_optimized_directive()
 #endif
    end do ! iteration loop
 
@@ -642,6 +469,166 @@ program nested
    call MPI_Finalize(ierr)
 #endif
 
+!***********************************************************************
+
+contains
+
+#ifdef USE_YAKL
+   subroutine run_original_cpu_yakl
+   
+   interface
+      subroutine yakl_original_loop(h_highOrderFlx,h_tracerCur,h_normalThicknessFlux) &
+                 bind(C,name="yakl_original_loop")
+        use iso_c_binding
+        real(c_double), intent(in), value, dimension(*) :: h_tracerCur,h_highOrderFlx
+        real(c_double), intent(in), value, dimension(*) :: h_normalThicknessFlux
+      end subroutine
+   end interface
+   
+   call yakl_original_loop(highOrderFlx,tracerCur,normalThicknessFlux)   
+
+   end subroutine run_original_cpu_yakl
+#endif
+
+!***********************************************************************
+
+   subroutine run_original_cpu_directive
+#ifdef USE_OPENACC
+      !$acc parallel loop gang vector &
+      !$acc    present(normalThicknessFlux, advMaskHighOrder, &
+      !$acc            nAdvCellsForEdge, advCellsForEdge, &
+      !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx) &
+      !$acc    private(wgtTmp, sgnTmp, flxTmp)
+#endif
+#ifdef USE_OMPOFFLOAD
+      !$omp target teams &
+      !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
+      !$omp            nAdvCellsForEdge, advCellsForEdge, &
+      !$omp            advCoefs, advCoefs3rd, tracerCur, &
+      !$omp            wgtTmp, sgnTmp) &
+      !$omp    map(from: highOrderFlx)
+      !$omp distribute parallel do
+#endif
+      do iEdge = 1, nEdges
+         ! compute some common intermediate factors
+#ifdef USE_OMPOFFLOAD
+         do k = 1, nVertLevels
+            wgtTmp(k,iEdge) = normalThicknessFlux   (k,iEdge)* &
+                        advMaskHighOrder(k,iEdge)
+            sgnTmp(k,iEdge) = sign(1.0_RKIND, &
+                             normalThicknessFlux(k,iEdge))
+            highOrderFlx(k,iEdge) = 0.0_RKIND
+         end do
+#else
+         do k = 1, nVertLevels
+            wgtTmp(k) = normalThicknessFlux   (k,iEdge)* &
+                        advMaskHighOrder(k,iEdge)
+            sgnTmp(k) = sign(1.0_RKIND, &
+                             normalThicknessFlux(k,iEdge))
+            flxTmp(k) = 0.0_RKIND
+         end do
+#endif
+
+         ! Compute 3rd or 4th fluxes where requested.
+         do i = 1, nAdvCellsForEdge(iEdge)
+            iCell = advCellsForEdge(i,iEdge)
+            kmin  = minLevelCell(iCell)
+            kmax  = maxLevelCell(iCell)
+            coef1 = advCoefs       (i,iEdge)
+            coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
+#ifdef USE_OMPOFFLOAD
+            do k = kmin, kmax
+               highOrderFlx(k,iEdge) = highOrderFlx(k,iEdge) + tracerCur(k,iCell)* &
+                           wgtTmp(k,iEdge)*(coef1 + coef3*sgnTmp(k,iEdge))
+            end do ! k loop
+#else
+            do k = kmin, kmax
+               !highOrderFlx(k,iEdge) = highOrderFlx(k,iEdge) + tracerCur(k,iCell)* &
+               !            wgtTmp(k)*(coef1 + coef3*sgnTmp(k))
+               flxTmp(k) = flxTmp(k) + tracerCur(k,iCell)* &
+                           wgtTmp(k)*(coef1 + coef3*sgnTmp(k))
+            enddo ! k loop
+#endif
+         end do ! i loop over nAdvCellsForEdge
+#ifndef USE_OMPOFFLOAD
+         do k = 1,nVertLevels
+            highOrderFlx(k,iEdge) = flxTmp(k)
+         end do
+#endif
+  
+      end do ! edge loop
+#ifdef USE_OMPOFFLOAD
+      !$omp end distribute parallel do
+      !$omp end target teams
+#endif
+   end subroutine run_original_cpu_directive
+
+!***********************************************************************
+
+#ifdef USE_YAKL
+   subroutine run_gpu_optimized_yakl
+   
+   interface
+      subroutine yakl_check(h_cellMask,h_tracerCur) &
+                 bind(C,name="yakl_check")
+        use iso_c_binding
+        real(c_double), intent(in), value, dimension(*) :: h_cellMask,h_tracerCur
+      end subroutine
+
+      subroutine yakl_gpu_optimized(h_highOrderFlx,h_tracerCur,h_normalThicknessFlux) &
+                 bind(C,name="yakl_gpu_optimized")
+        use iso_c_binding
+        real(c_double), intent(in), value, dimension(*) :: h_tracerCur,h_highOrderFlx
+        real(c_double), intent(in), value, dimension(*) :: h_normalThicknessFlux
+      end subroutine
+   end interface
+   
+   !call yakl_check(cellMask,tracerCur)
+   call yakl_gpu_optimized(highOrderFlx,tracerCur,normalThicknessFlux)   
+
+   end subroutine run_gpu_optimized_yakl
+#endif
+
+!***********************************************************************
+   subroutine run_gpu_optimized_directive
+#ifdef USE_OPENACC
+      !$acc parallel loop gang vector collapse(2) &
+      !$acc    present(normalThicknessFlux, advMaskHighOrder, &
+      !$acc            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$acc            advCoefs, advCoefs3rd, tracerCur, highOrderFlx)
+#endif
+#ifdef USE_OMPOFFLOAD
+      !$omp target teams &
+      !$omp    map(to: normalThicknessFlux, advMaskHighOrder, &
+      !$omp            nAdvCellsForEdge, advCellsForEdge, cellMask, &
+      !$omp            advCoefs, advCoefs3rd, tracerCur) &
+      !$omp    map(from: highOrderFlx)
+      !$omp distribute parallel do collapse(2) &
+      !$omp    private(iCell, coef1, coef2, coef3, edgeFlx,csgn)
+#endif
+      do iEdge = 1, nEdges
+      do k = 1, nVertLevels
+         ! Compute 3rd or 4th fluxes where requested.
+         coef2 = normalThicknessFlux(k,iEdge)*advMaskHighOrder(k,iEdge)
+         csgn = sign(1.0_RKIND,normalThicknessFlux(k,iEdge))
+         edgeFlx = 0.0_RKIND
+         do i = 1, nAdvCellsForEdge(iEdge)
+            iCell = advCellsForEdge(i,iEdge)
+            coef1 = advCoefs       (i,iEdge)
+            coef3 = advCoefs3rd    (i,iEdge)*coef3rdOrder
+            edgeFlx = edgeFlx + tracerCur(k,iCell)*cellMask(k,iCell)* &
+                      coef2 * (coef1 + coef3*csgn)
+         end do ! i loop over nAdvCellsForEdge
+      
+         highOrderFlx(k,iEdge) = edgeFlx
+      end do ! vertical loop
+      end do ! iEdge loop  
+#ifdef USE_OMPOFFLOAD
+      !$omp end distribute parallel do
+      !$omp end target teams
+#endif
+   end subroutine run_gpu_optimized_directive
+   
 !***********************************************************************
 
 end program nested
