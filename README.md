@@ -10,6 +10,9 @@ Please contact us with any alternative suggestions.
 # Authors: Kernel Extraction
 * Matt Norman
 * Sarat Sreepathi
+* Andrew Bradley
+* Rob Aulwes
+* Phil Jones
 
 # Point of Contact
 Please send any questions or comments to Sarat Sreepathi (sarat-at-ornl.gov).
