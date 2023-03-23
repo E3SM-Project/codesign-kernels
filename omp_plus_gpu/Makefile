@@ -4,9 +4,9 @@ tracers-yakl-amd:
 	make tracers \
 	"CXX=hipcc" \
 	"YARCH=HIP" \
-	"CPPFLAGS=-DUSE_YAKL -DNO_MPI -P -traditional" \
+	"CPPFLAGS=-DUSE_YAKL -DYAKL_ENABLE_STREAMS -DNO_MPI -P -traditional" \
 	"FFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -DUSE_YAKL -DNO_MPI -DF90_PACK_SIZE=4" \
-	"CXXFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -std=c++17 -DYAKL_ARCH_HIP -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90a__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I./YAKL/src -I./YAKL/external" \
+	"CXXFLAGS=-g -O3 -m64 -fopenmp -Wall -pedantic -std=c++17 -DYAKL_ENABLE_STREAMS -DYAKL_ARCH_HIP -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90a__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I./YAKL/src -I./YAKL/external" \
 	"LDFLAGS=-O3 -m64 -L${ROCM_PATH}/lib -L./YAKL/build -lyakl -lamdhip64 -fopenmp -lroctx64 -lrocfft "
 
 tracers: libYAKL tracers.o

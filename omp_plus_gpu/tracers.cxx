@@ -33,6 +33,8 @@ typedef struct {
 } field2d_t;
 
 
+std::vector<yakl::Stream>   streams;
+
 int ntracers = 42;
 int nthreads = 1;
 int nVertLevels = 100;
@@ -198,6 +200,7 @@ void alloc_fields() {
 
    for ( int n = 0; n < nthreads; n++ )
    {
+       streams.push_back(yakl::create_stream());
       auto nstr = std::to_string(n);
       wgtTmp[n].field = yakl_create_real(std::string("wgtTmp") + nstr, nVertLevels, nEdges);
       sgnTmp[n].field = yakl_create_real(std::string("sgnTmp") + nstr, nVertLevels, nEdges);
@@ -363,8 +366,8 @@ void compute_tracer_flx(d_double_2d_t & tracerCur, int tid) {
         wgtTmp(k,iEdge) = normalThicknessFlux(k,iEdge)*advMaskHighOrder(k,iEdge);
         sgnTmp(k,iEdge) = SIGN(1.0, normalThicknessFlux(k,iEdge));
         highOrderFlx(k,iEdge) = 0.0;
-    }, yakl::LaunchConfig<>());
-        
+    }, yakl::DefaultLaunchConfig().set_stream(streams[tid]));
+
     yakl::fortran::parallel_for( yakl::fortran::Bounds<2>({1,nEdges},{1,nVertLevels}) ,
     YAKL_LAMBDA(int iEdge,int k)
     {
@@ -379,7 +382,7 @@ void compute_tracer_flx(d_double_2d_t & tracerCur, int tid) {
                           wgtTmp(k,iEdge)*(coef1 + coef3*sgnTmp(k,iEdge));
             }
         }
-    }, yakl::LaunchConfig<>());
+    }, yakl::DefaultLaunchConfig().set_stream(streams[tid]));
 
     yakl::fortran::parallel_for( yakl::fortran::Bounds<2>({1,nEdges},{1,nVertLevels}) ,
     YAKL_LAMBDA(int iEdge,int k)
@@ -408,8 +411,8 @@ void compute_tracer_flx(d_double_2d_t & tracerCur, int tid) {
             highOrderFlx(k,iEdge) = highOrderFlx(k,iEdge)
                                   -  lowOrderFlx(k,iEdge);
         }
-    }, yakl::LaunchConfig<>());
-    
+    }, yakl::DefaultLaunchConfig().set_stream(streams[tid]));
+
 }
 
 //
@@ -486,7 +489,7 @@ int main(int, const char **)
    #pragma omp parallel for
    for ( int tr = 0; tr < ntracers; ++tr ) {
       int tid = omp_get_thread_num();
-	//std::cerr << " tid, tr = " << tid << " " << tr << std::endl;
+	std::cerr << " tid, tr = " << tid << " " << tr << std::endl;
       compute_tracer_flx(*(mpas::tracers[tr].field), tid);
    }
 
